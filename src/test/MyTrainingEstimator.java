@@ -1,4 +1,4 @@
-package spr2;/*
+package test;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -33,12 +33,12 @@ import java.util.Collection;
 
 /**
  * Rating estimates used while training the predictor.  An estimator can be constructed
- * using {@link TestFunkSVDUpdateRule#makeEstimator(org.grouplens.lenskit.data.snapshot.PreferenceSnapshot)}.
+ * using {@link MyFunkSVDUpdateRule#makeEstimator(PreferenceSnapshot)}.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  * @since 1.1
  */
-public final class TestTrainingEstimator {
+public final class MyTrainingEstimator {
 	private final Collection<IndexedPreference> ratings;
 	private final double[] estimates;
 	private final PreferenceDomain domain;
@@ -50,7 +50,7 @@ public final class TestTrainingEstimator {
 	 * @param baseline The baseline predictor.
 	 * @param dom      The preference domain (for clamping).
 	 */
-	TestTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
+	MyTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
 		ratings = snap.getRatings();
 		domain = dom;
 		estimates = new double[ratings.size()];

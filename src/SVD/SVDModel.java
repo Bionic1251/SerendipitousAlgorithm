@@ -1,4 +1,4 @@
-package lu;
+package SVD;
 
 import com.google.common.collect.ImmutableList;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -18,17 +18,17 @@ import java.util.List;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-@DefaultProvider(LuFunkSVDModelBuilder.class)
+@DefaultProvider(SVDModelBuilder.class)
 @Shareable
-public final class LuFunkSVDModel extends MFModel {
+public final class SVDModel extends MFModel {
 	private static final long serialVersionUID = 3L;
 
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
 
-	public LuFunkSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
-						  IdIndexMapping uidx, IdIndexMapping iidx,
-						  List<FeatureInfo> features) {
+	public SVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
+					IdIndexMapping uidx, IdIndexMapping iidx,
+					List<FeatureInfo> features) {
 		super(umat, imat, uidx, iidx);
 
 		featureInfo = ImmutableList.copyOf(features);

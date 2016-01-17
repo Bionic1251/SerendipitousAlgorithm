@@ -1,4 +1,4 @@
-package spr2;/*
+package test;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -21,9 +21,26 @@ package spr2;/*
 
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 
-
-public final class TestFunkSVDUpdater {
-	private final TestFunkSVDUpdateRule updateRule;
+/**
+ * Encapsulation of the FunkSVD update process.  Using this class takes a two-step process:
+ *
+ * <ol>
+ *     <li>Call {@link #prepare(int, double, double, double, double, double, double)} to prepare
+ *     an update.</li>
+ *     <li>Call {@link #getItemFeatureUpdate()} and {@link #getUserFeatureUpdate()} to get the
+ *     deltas to apply to the item-feature and user-feature values, respectively.</li>
+ * </ol>
+ *
+ * <p>The updater can be reused for multiple updates, but cannot be shared between threads.  It
+ * is typical to create one updater and reuse it for much of the training process.</p>
+ *
+ * <p>The updater also tracks statistics across runs.</p>
+ *
+ * @since 2.1
+ * @author <a href="http://www.grouplens.org">GroupLens Research</a>
+ */
+public final class MyFunkSVDUpdater {
+	private final MyFunkSVDUpdateRule updateRule;
 
 	private double error;
 	private double userFeatureValue;
@@ -31,7 +48,7 @@ public final class TestFunkSVDUpdater {
 	private double sse;
 	private int n;
 
-	TestFunkSVDUpdater(TestFunkSVDUpdateRule rule) {
+	MyFunkSVDUpdater(MyFunkSVDUpdateRule rule) {
 		updateRule = rule;
 	}
 
@@ -64,8 +81,18 @@ public final class TestFunkSVDUpdater {
 		}
 	}
 
-	public void prepare(double rating, double estimate,
-						double uv, double iv, double trail) {
+	/**
+	 * Prepare the updater for updating the feature values for a particular user/item ID.
+	 *
+	 * @param feature  The feature we are training.
+	 * @param rating   The rating value.
+	 * @param estimate The estimate through the previous feature.
+	 * @param uv       The user feature value.
+	 * @param iv       The item feature value.
+	 * @param trail    The sum of the trailing feature value products.
+	 */
+	public void prepare(int feature, double rating, double estimate,
+						double uv, double iv, double trail, double pop) {
 		// Compute prediction
 		double pred = estimate + uv * iv;
 		PreferenceDomain dom = updateRule.getDomain();
@@ -75,7 +102,7 @@ public final class TestFunkSVDUpdater {
 		pred += trail;
 
 		// Compute the err and store this value
-		error = (rating - pred);
+		error = (rating - pred) * pop;
 		userFeatureValue = uv;
 		itemFeatureValue = iv;
 

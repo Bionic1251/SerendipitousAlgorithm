@@ -1,4 +1,4 @@
-package lu;
+package SVD;
 /*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
@@ -24,7 +24,6 @@ package lu;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import mikera.vectorz.AVector;
-import mikera.vectorz.Vector;
 import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.baseline.BaselineScorer;
 import org.grouplens.lenskit.basic.AbstractItemScorer;
@@ -35,8 +34,6 @@ import org.grouplens.lenskit.data.event.Ratings;
 import org.grouplens.lenskit.data.history.History;
 import org.grouplens.lenskit.data.history.UserHistory;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
-import org.grouplens.lenskit.iterative.TrainingLoopController;
-import org.grouplens.lenskit.mf.funksvd.RuntimeUpdate;
 import org.grouplens.lenskit.mf.svd.BiasedMFKernel;
 import org.grouplens.lenskit.mf.svd.DomainClampingKernel;
 import org.grouplens.lenskit.mf.svd.DotProductKernel;
@@ -60,39 +57,22 @@ import javax.inject.Inject;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class LuFunkSVDItemScorer extends AbstractItemScorer {
-	private static final Logger logger = LoggerFactory.getLogger(LuFunkSVDItemScorer.class);
-	protected final LuFunkSVDModel model;
+public class SVDItemScorer extends AbstractItemScorer {
+	private static final Logger logger = LoggerFactory.getLogger(SVDItemScorer.class);
+	protected final SVDModel model;
 	protected final BiasedMFKernel kernel;
 	private UserEventDAO dao;
 	private final ItemScorer baselineScorer;
 	private final int featureCount;
 
-	@Nullable
-	private final LuFunkSVDUpdateRule rule;
-
-	/**
-	 * Construct the item scorer.
-	 *
-	 * @param dao      The DAO.
-	 * @param model    The model.
-	 * @param baseline The baseline scorer.  Be very careful when configuring a different baseline
-	 *                 at runtime than at model-build time; such a configuration is unlikely to
-	 *                 perform well.
-	 * @param rule     The update rule, or {@code null} (the default) to only use the user features
-	 *                 from the model. If provided, this update rule is used to update a user's
-	 *                 feature values based on their profile when scores are requested.
-	 */
 	@Inject
-	public LuFunkSVDItemScorer(UserEventDAO dao, LuFunkSVDModel model,
-							   @BaselineScorer ItemScorer baseline,
-							   @Nullable PreferenceDomain dom,
-							   @Nullable @RuntimeUpdate LuFunkSVDUpdateRule rule) {
+	public SVDItemScorer(UserEventDAO dao, SVDModel model,
+						 @BaselineScorer ItemScorer baseline,
+						 @Nullable PreferenceDomain dom) {
 		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;
 		baselineScorer = baseline;
-		this.rule = rule;
 
 		if (dom == null) {
 			kernel = new DotProductKernel();
@@ -101,11 +81,6 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 		}
 
 		featureCount = model.getFeatureCount();
-	}
-
-	@Nullable
-	public LuFunkSVDUpdateRule getUpdateRule() {
-		return rule;
 	}
 
 	/**
@@ -128,9 +103,6 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 				double score = kernel.apply(0, uprefs, ivec);
 				output.set(e, score);
 			}
-		}
-		if(output.isEmpty()){
-			System.out.println("sdsda");
 		}
 	}
 
@@ -164,11 +136,6 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 		AVector uprefs = model.getUserVector(user);
 		if (uprefs == null) {
 			logger.debug("no feature vector for user {}", user);
-			if (ratings.isEmpty() || rule == null) {
-				logger.debug("no ratings or rule, bailing out on user {}", user);
-				// no real work to do.
-				return;
-			}
 			uprefs = model.getAverageUserVector();
 		}
 
@@ -176,65 +143,7 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 		// propagate estimates to the output scores
 		scores.set(estimates);
 
-		if (!ratings.isEmpty() && rule != null) {
-			logger.debug("refreshing feature values for user {}", user);
-			AVector updated = Vector.create(uprefs);
-			for (int f = 0; f < featureCount; f++) {
-				trainUserFeature(user, updated, ratings, estimates, f);
-			}
-			uprefs = updated;
-		}
-
 		// scores are the estimates, uprefs are trained up.
 		computeScores(user, uprefs, scores);
-	}
-
-	private void trainUserFeature(long user, AVector uprefs, SparseVector ratings,
-								  MutableSparseVector estimates, int feature) {
-		assert rule != null;
-		assert uprefs.length() == featureCount;
-		assert feature >= 0 && feature < featureCount;
-
-		int tailStart = feature + 1;
-		int tailSize = featureCount - feature - 1;
-		AVector utail = uprefs.subVector(tailStart, tailSize);
-		MutableSparseVector tails = MutableSparseVector.create(ratings.keySet());
-		for (VectorEntry e: tails.view(VectorEntry.State.EITHER)) {
-			AVector ivec = model.getItemVector(e.getKey());
-			if (ivec == null) {
-				// FIXME Do this properly
-				tails.set(e, 0);
-			} else {
-				ivec = ivec.subVector(tailStart, tailSize);
-				tails.set(e, utail.dotProduct(ivec));
-			}
-		}
-
-		double rmse = Double.MAX_VALUE;
-		TrainingLoopController controller = rule.getTrainingLoopController();
-		while (controller.keepTraining(rmse)) {
-			rmse = doFeatureIteration(user, uprefs, ratings, estimates, feature, tails);
-		}
-	}
-
-	private double doFeatureIteration(long user, AVector uprefs,
-									  SparseVector ratings, MutableSparseVector estimates,
-									  int feature, SparseVector itemTails) {
-		assert rule != null;
-
-		LuFunkSVDUpdater updater = rule.createUpdater();
-		for (VectorEntry e: ratings) {
-			final long iid = e.getKey();
-			final AVector ivec = model.getItemVector(iid);
-			if (ivec == null) {
-				continue;
-			}
-
-			updater.prepare(e.getValue(), estimates.get(iid),
-					uprefs.get(feature), ivec.get(feature), itemTails.get(iid));
-			// Step 4: update user preferences
-			uprefs.addAt(feature, updater.getUserFeatureUpdate());
-		}
-		return updater.getRMSE();
 	}
 }

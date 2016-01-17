@@ -1,10 +1,15 @@
+import SVD.SVDItemScorer;
+import annotation.Alpha;
+import annotation.Threshold;
 import evaluationMetric.SerendipityTopNMetric;
+import lu.LuSVDItemScorer;
 import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.baseline.BaselineScorer;
 import org.grouplens.lenskit.baseline.ItemMeanRatingItemScorer;
 import org.grouplens.lenskit.baseline.UserMeanBaseline;
 import org.grouplens.lenskit.baseline.UserMeanItemScorer;
 import org.grouplens.lenskit.core.LenskitConfiguration;
+import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.source.DataSource;
 import org.grouplens.lenskit.data.source.GenericDataSource;
 import org.grouplens.lenskit.data.text.DelimitedColumnEventFormat;
@@ -23,7 +28,7 @@ import org.grouplens.lenskit.mf.funksvd.*;
 import org.hamcrest.Matchers;
 import pop.PopItemScorer;
 import spr.SPRFunkSVDItemScorer;
-import lu.LuFunkSVDItemScorer;
+import zheng.ZhengSVDItemScorer;
 
 import java.io.File;
 
@@ -35,7 +40,7 @@ public class AdvancedEvaluatorRunner {
 	private static final int AT_N = 5;
 	private static final int MY_N_MAX = 5;
 	private static final int N_MAX = 100;
-	private static final int MY_SERENDIPITOUS_ITEMS_NUMBER = 100;
+	private static final int MY_SERENDIPITOUS_ITEMS_NUMBER = 2;
 	private static final int SERENDIPITOUS_ITEMS_NUMBER = 100;
 	private static final double THRESHOLD = 3.0;
 	private static final String MY_DATASET = "D:\\bigdata\\movielens\\fake\\all_ratings_extended";
@@ -46,9 +51,12 @@ public class AdvancedEvaluatorRunner {
 	private static final String OUTPUT_USER_PATH = "./results/user.csv";
 	private static final String OUTPUT_ITEM_PATH = "./results/item.csv";
 
+	private static final double MIN = 0;
+	private static final double MAX = 5;
+
 	private static final String MY = "my";
 	private static final String SMALL = "small";
-	private static final String BIG = "BIG";
+	private static final String BIG = "big";
 	private static final String STATE = SMALL;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
@@ -66,7 +74,7 @@ public class AdvancedEvaluatorRunner {
 			holdout = HOLDOUT_NUMBER;
 			path = BIG_DATASET;
 		}
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(path), eventFormat));
+		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(path), eventFormat), new PreferenceDomain(MIN, MAX));
 		CrossfoldTask task = new CrossfoldTask(TRAIN_TEST_FOLDER_NAME);
 		task.setHoldout(holdout);
 		task.setPartitions(CROSSFOLD_NUMBER);
@@ -83,39 +91,35 @@ public class AdvancedEvaluatorRunner {
 		setEvaluator(evaluator);
 
 		LenskitConfiguration LuSVD = new LenskitConfiguration();
-		LuSVD.bind(ItemScorer.class).to(LuFunkSVDItemScorer.class);
+		LuSVD.bind(ItemScorer.class).to(LuSVDItemScorer.class);
 		LuSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		LuSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		LuSVD.set(FeatureCount.class).to(3);
 		LuSVD.set(LearningRate.class).to(0.001);
-		LuSVD.set(IterationCount.class).to(2);
-		//LuSVD.set(InitialFeatureValue.class).to(2.5);
-		evaluator.addAlgorithm("LuSVD", LuSVD);
-
-		LenskitConfiguration SPRSVD = new LenskitConfiguration();
-		SPRSVD.bind(ItemScorer.class).to(SPRFunkSVDItemScorer.class);
-		SPRSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		SPRSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		SPRSVD.set(FeatureCount.class).to(3);
-		SPRSVD.set(LearningRate.class).to(0.001);
-		SPRSVD.set(IterationCount.class).to(5);
-		//SPRSVD.set(InitialFeatureValue.class).to(2.5);
-		evaluator.addAlgorithm("SPRSVD", SPRSVD);
-
-		LenskitConfiguration POP = new LenskitConfiguration();
-		POP.bind(ItemScorer.class).to(PopItemScorer.class);
-		POP.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		POP.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		evaluator.addAlgorithm("POP", POP);
+		LuSVD.set(IterationCount.class).to(10);
+		LuSVD.set(Threshold.class).to(THRESHOLD);
+		LuSVD.set(Alpha.class).to(0.5);
+		//evaluator.addAlgorithm("LuSVD", LuSVD);
 
 		LenskitConfiguration SVD = new LenskitConfiguration();
-		SVD.bind(ItemScorer.class).to(FunkSVDItemScorer.class);
+		SVD.bind(ItemScorer.class).to(SVDItemScorer.class);
 		SVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		SVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		SVD.set(FeatureCount.class).to(3);
 		SVD.set(IterationCount.class).to(500);
-		//SVD.set(LearningRate.class).to(0.01);
-		evaluator.addAlgorithm("SVD", SVD);
+		//evaluator.addAlgorithm("SVD", SVD);
+
+		LenskitConfiguration ZhengSVD = new LenskitConfiguration();
+		ZhengSVD.bind(ItemScorer.class).to(ZhengSVDItemScorer.class);
+		ZhengSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		ZhengSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		ZhengSVD.set(FeatureCount.class).to(3);
+		ZhengSVD.set(IterationCount.class).to(500);
+		evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
+
+		LenskitConfiguration POP = new LenskitConfiguration();
+		POP.bind(ItemScorer.class).to(PopItemScorer.class);
+		evaluator.addAlgorithm("POP", POP);
 
 		addMetrics(evaluator);
 
