@@ -1,22 +1,27 @@
 package zheng;
 
 import annotation.Alpha;
+import it.unimi.dsi.fastutil.longs.LongCollection;
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
 import mikera.vectorz.AVector;
 import mikera.vectorz.Vector;
+import org.grouplens.lenskit.collections.FastCollection;
+import org.grouplens.lenskit.collections.FastIterable;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
-import org.grouplens.lenskit.indexes.IdIndexMapping;
 import org.grouplens.lenskit.iterative.LearningRate;
 import org.grouplens.lenskit.iterative.RegularizationTerm;
 import org.grouplens.lenskit.iterative.StoppingCondition;
 import org.grouplens.lenskit.iterative.TrainingLoopController;
+import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
+import org.grouplens.lenskit.vectors.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,14 +58,16 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
+	private final ItemItemModel itemItemModel;
 	private final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
+	private final Map<Long, SparseVector> userItemDissimilarityMap = new HashMap<Long, SparseVector>();
 
 	@Inject
 	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								@FeatureCount int featureCount,
 								@InitialFeatureValue double initVal,
 								@Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate,
-								@RegularizationTerm double reg, StoppingCondition stop) {
+								@RegularizationTerm double reg, StoppingCondition stop, ItemItemModel itemItemModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -68,6 +75,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		learningRate = lrate;
 		regularization = reg;
 		stoppingCondition = stop;
+		this.itemItemModel = itemItemModel;
 	}
 
 
@@ -88,8 +96,47 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		}
 	}
 
+	private void populateUserItemMap() {
+		LongCollection userIds = snapshot.getUserIds();
+		LongCollection itemIds = snapshot.getItemIds();
+		int size = userIds.size();
+		int maxCount = 0;
+		for (long userId : userIds) {
+			MutableSparseVector itemDissimilarityVector = MutableSparseVector.create(itemIds, 0.0);
+			Collection<IndexedPreference> ratings = snapshot.getUserRatings(userId);
+			for (long itemId : itemIds) {
+				double dissimilaritySum = 0;
+				int count = 0;
+				for (IndexedPreference rating : ratings) {
+					SparseVector vector = itemItemModel.getNeighbors(itemId);
+					if (rating.getItemId() == itemId || !vector.containsKey(rating.getItemId())) {
+						continue;
+					}
+					dissimilaritySum += 1 - vector.get(rating.getItemId());
+					count++;
+				}
+				maxCount = Math.max(maxCount, count);
+				if (count == 0) {
+					continue;
+				}
+				dissimilaritySum = dissimilaritySum / count;
+				if(Double.isNaN(dissimilaritySum)){
+					System.out.println(count + " !!!");
+				}
+				itemDissimilarityVector.set(itemId, dissimilaritySum);
+			}
+			userItemDissimilarityMap.put(userId, itemDissimilarityVector);
+			size--;
+			if (size % 100 == 0) {
+				System.out.println(size + " left");
+			}
+		}
+		System.out.println("Count " + maxCount);
+	}
+
 	@Override
 	public ZhengSVDModel get() {
+		populateUserItemMap();
 		populatePopMap();
 
 		int userCount = snapshot.getUserIds().size();
@@ -122,39 +169,65 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		}
 
 		double sum;
+		LongCollection itemIdCollection = snapshot.getItemIds();
+		LongCollection userIdCollection = snapshot.getUserIds();
 		TrainingLoopController controller = stoppingCondition.newLoop();
+		double maxW = 0;
 		while (controller.keepTraining(0.0)) {
 			sum = 0;
-			for (IndexedPreference rating : snapshot.getRatings()) {
-				AVector item = itemFeatures.getRow(rating.getItemIndex());
-				AVector user = userFeatures.getRow(rating.getUserIndex());
-				double prediction = item.dotProduct(user);
-				double w = 1 - popMap.get(rating.getItemIndex());
-				double error = (rating.getValue() - prediction) * w;
-				if (Double.isNaN(error) || Double.isInfinite(error)) {
-					System.out.printf("Yo");
-				}
-				sum += Math.abs(error);
-				for (int i = 0; i < featureCount; i++) {
-					double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
-					if (item.get(i) > 100 || user.get(i) > 100) {
-						System.out.println("item " + item.get(i));
-						System.out.println("user " + user.get(i));
-					}
-					if (Double.isNaN(val) || Double.isInfinite(val)) {
-						System.out.println("NaN");
-					}
-					item.set(i, val);
 
-					val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
-					if (Double.isNaN(val) || Double.isInfinite(val)) {
-						System.out.println("NaN");
+			for (long userId : userIdCollection) {
+				Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
+				Map<Long, Double> userRatings = new HashMap<Long, Double>();
+				for (IndexedPreference preference : preferences) {
+					userRatings.put(preference.getItemId(), preference.getValue());
+				}
+				for (long itemId : itemIdCollection) {
+					double rating = 0.0;
+					if (userRatings.containsKey(itemId)) {
+						rating = userRatings.get(itemId);
 					}
-					user.set(i, val);
+					int itemIndex = snapshot.itemIndex().getIndex(itemId);
+					int userIndex = snapshot.userIndex().getIndex(userId);
+					AVector item = itemFeatures.getRow(itemIndex);
+					AVector user = userFeatures.getRow(userIndex);
+					double prediction = item.dotProduct(user);
+					double dissimilarity = 0.0;
+					if (userItemDissimilarityMap.containsKey(userId)) {
+						SparseVector itemDissimilarityVector = userItemDissimilarityMap.get(userId);
+						if (itemDissimilarityVector.containsKey(itemId)) {
+							dissimilarity = itemDissimilarityVector.get(itemId);
+						}
+					}
+					double w = 1 - popMap.get(itemIndex) + dissimilarity;
+					double error = (rating - prediction) * w;
+					maxW = Math.max(w, maxW);
+					if (Double.isNaN(error) || Double.isInfinite(error)) {
+						System.out.printf("Yo");
+					}
+					sum += Math.abs(error);
+					for (int i = 0; i < featureCount; i++) {
+						double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
+						if (item.get(i) > 100 || user.get(i) > 100) {
+							System.out.println("item " + item.get(i));
+							System.out.println("user " + user.get(i));
+						}
+						if (Double.isNaN(val) || Double.isInfinite(val)) {
+							System.out.println("NaN");
+						}
+						item.set(i, val);
+
+						val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
+						if (Double.isNaN(val) || Double.isInfinite(val)) {
+							System.out.println("NaN");
+						}
+						user.set(i, val);
+					}
 				}
 			}
 			System.out.println("MAE " + sum);
 		}
+		System.out.println("MaxW" + maxW);
 
 		// Wrap the user/item matrices because we won't use or modify them again
 		return new ZhengSVDModel(ImmutableMatrix.wrap(userFeatures),

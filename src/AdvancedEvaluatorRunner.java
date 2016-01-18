@@ -24,7 +24,12 @@ import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.iterative.IterationCount;
 import org.grouplens.lenskit.iterative.LearningRate;
+import org.grouplens.lenskit.knn.NeighborhoodSize;
+import org.grouplens.lenskit.knn.item.ItemItemScorer;
+import org.grouplens.lenskit.knn.item.ItemSimilarity;
 import org.grouplens.lenskit.mf.funksvd.*;
+import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
+import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import org.hamcrest.Matchers;
 import pop.PopItemScorer;
 import spr.SPRFunkSVDItemScorer;
@@ -94,7 +99,7 @@ public class AdvancedEvaluatorRunner {
 		LuSVD.bind(ItemScorer.class).to(LuSVDItemScorer.class);
 		LuSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		LuSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		LuSVD.set(FeatureCount.class).to(3);
+		LuSVD.set(FeatureCount.class).to(10);
 		LuSVD.set(LearningRate.class).to(0.001);
 		LuSVD.set(IterationCount.class).to(10);
 		LuSVD.set(Threshold.class).to(THRESHOLD);
@@ -105,7 +110,7 @@ public class AdvancedEvaluatorRunner {
 		SVD.bind(ItemScorer.class).to(SVDItemScorer.class);
 		SVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		SVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		SVD.set(FeatureCount.class).to(3);
+		SVD.set(FeatureCount.class).to(10);
 		SVD.set(IterationCount.class).to(500);
 		//evaluator.addAlgorithm("SVD", SVD);
 
@@ -114,12 +119,20 @@ public class AdvancedEvaluatorRunner {
 		ZhengSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		ZhengSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		ZhengSVD.set(FeatureCount.class).to(3);
-		ZhengSVD.set(IterationCount.class).to(500);
+		ZhengSVD.set(IterationCount.class).to(300);
+		ZhengSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
+		ZhengSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
 
 		LenskitConfiguration POP = new LenskitConfiguration();
 		POP.bind(ItemScorer.class).to(PopItemScorer.class);
-		evaluator.addAlgorithm("POP", POP);
+		//evaluator.addAlgorithm("POP", POP);
+
+		LenskitConfiguration itemItem = new LenskitConfiguration();
+		itemItem.bind(ItemScorer.class).to(ItemItemScorer.class);
+		itemItem.bind(BaselineScorer.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		itemItem.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
+		//evaluator.addAlgorithm("itemItem", itemItem);
 
 		addMetrics(evaluator);
 
