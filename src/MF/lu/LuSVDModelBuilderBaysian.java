@@ -25,7 +25,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.*;
 
-public class LuSVDModelBuilder implements Provider<LuSVDModel> {
+public class LuSVDModelBuilderBaysian implements Provider<LuSVDModel> {
 
 	private final double alpha;
 	private int count;
@@ -42,11 +42,11 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 	protected final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
 
 	@Inject
-	public LuSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
-							 @FeatureCount int featureCount,
-							 @InitialFeatureValue double initVal,
-							 @Threshold double threshold, @Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate,
-							 @RegularizationTerm double reg, StoppingCondition stop) {
+	public LuSVDModelBuilderBaysian(@Transient @Nonnull PreferenceSnapshot snapshot,
+									@FeatureCount int featureCount,
+									@InitialFeatureValue double initVal,
+									@Threshold double threshold, @Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate,
+									@RegularizationTerm double reg, StoppingCondition stop) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -153,7 +153,7 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		dislikedPred = domain.clampValue(dislikedPred);
 
 		double diff = likedPred - dislikedPred;
-		func += Math.log(1 + Math.exp(diff));
+		func += function(diff);
 		if (diff > 0) {
 			count++;
 		}
@@ -164,7 +164,6 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 
 
 		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
-		//pop = 1;
 		for (int i = 0; i < featureCount; i++) {
 			double der = getDerivative(user.get(i), pop, diff);
 			double val = likedVec.get(i) + learningRate * (der - regularization * likedVec.get(i));
@@ -193,7 +192,11 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		}
 	}
 
-	protected double getDerivative(double a, double pop, double diff){
-		return  a * Math.exp(diff) / (1 + Math.exp(diff)) * pop;
+	protected double getDerivative(double a, double pop, double diff) {
+		return a * Math.exp(diff) / (1 + Math.exp(diff)) * pop;
+	}
+
+	protected double function(double diff) {
+		return Math.log(1 + Math.exp(diff));
 	}
 }

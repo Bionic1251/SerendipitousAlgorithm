@@ -39,7 +39,6 @@ public class LuSVDItemScorer extends AbstractItemScorer {
 	public LuSVDItemScorer(UserEventDAO dao, LuSVDModel model,
 						   @BaselineScorer ItemScorer baseline,
 						   @Nullable PreferenceDomain dom) {
-		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;
 		baselineScorer = baseline;
@@ -52,8 +51,6 @@ public class LuSVDItemScorer extends AbstractItemScorer {
 
 		featureCount = model.getFeatureCount();
 	}
-
-	@Nullable
 
 	/**
 	 * Predict for a user using their preference array and history vector.

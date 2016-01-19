@@ -120,7 +120,7 @@ public class AdvancedEvaluatorRunner {
 		ZhengSVD.set(IterationCount.class).to(300);
 		ZhengSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		ZhengSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
-		evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
+		//evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
 
 		LenskitConfiguration POP = new LenskitConfiguration();
 		POP.bind(ItemScorer.class).to(PopItemScorer.class);

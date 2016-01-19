@@ -66,9 +66,8 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 	}
 
 
-		@Override
+	@Override
 	public SVDModel get() {
-
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);
 
@@ -96,38 +95,9 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 			featureInfo.add(fib.build());
 		}
 
-		double sum;
 		TrainingLoopController controller = stoppingCondition.newLoop();
 		while (controller.keepTraining(0.0)) {
-			sum = 0;
-			for (IndexedPreference rating : snapshot.getRatings()) {
-				AVector item = itemFeatures.getRow(rating.getItemIndex());
-				AVector user = userFeatures.getRow(rating.getUserIndex());
-				double prediction = item.dotProduct(user);
-				double error = (rating.getValue() - prediction);
-				if (Double.isNaN(error) || Double.isInfinite(error)) {
-					System.out.printf("Yo");
-				}
-				sum += Math.abs(error);
-				for (int i = 0; i < featureCount; i++) {
-					double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
-					if (item.get(i) > 100 || user.get(i) > 100) {
-						System.out.println("item " + item.get(i));
-						System.out.println("user " + user.get(i));
-					}
-					if (Double.isNaN(val) || Double.isInfinite(val)) {
-						System.out.println("NaN");
-					}
-					item.set(i, val);
-
-					val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
-					if (Double.isNaN(val) || Double.isInfinite(val)) {
-						System.out.println("NaN");
-					}
-					user.set(i, val);
-				}
-			}
-			System.out.println("MAE " + sum);
+			trainFeatures(userFeatures, itemFeatures);
 		}
 
 		// Wrap the user/item matrices because we won't use or modify them again
@@ -135,5 +105,37 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
+	}
+
+	private void trainFeatures(Matrix userFeatures, Matrix itemFeatures) {
+		double sum = 0;
+		for (IndexedPreference rating : snapshot.getRatings()) {
+			AVector item = itemFeatures.getRow(rating.getItemIndex());
+			AVector user = userFeatures.getRow(rating.getUserIndex());
+			double prediction = item.dotProduct(user);
+			double error = (rating.getValue() - prediction);
+			if (Double.isNaN(error) || Double.isInfinite(error)) {
+				System.out.printf("Yo");
+			}
+			sum += Math.abs(error);
+			for (int i = 0; i < featureCount; i++) {
+				double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
+				if (item.get(i) > 100 || user.get(i) > 100) {
+					System.out.println("item " + item.get(i));
+					System.out.println("user " + user.get(i));
+				}
+				if (Double.isNaN(val) || Double.isInfinite(val)) {
+					System.out.println("NaN");
+				}
+				item.set(i, val);
+
+				val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
+				if (Double.isNaN(val) || Double.isInfinite(val)) {
+					System.out.println("NaN");
+				}
+				user.set(i, val);
+			}
+			System.out.println("MAE " + sum / snapshot.getRatings().size());
+		}
 	}
 }

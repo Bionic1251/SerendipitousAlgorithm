@@ -15,9 +15,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-public class LuSVDBuilder extends LuSVDModelBuilder {
+public class LuSVDModelBuilderHinge extends LuSVDModelBuilderBaysian {
 	@Inject
-	public LuSVDBuilder(@Transient @Nonnull PreferenceSnapshot snapshot, @FeatureCount int featureCount, @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate, @RegularizationTerm double reg, StoppingCondition stop) {
+	public LuSVDModelBuilderHinge(@Transient @Nonnull PreferenceSnapshot snapshot, @FeatureCount int featureCount, @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate, @RegularizationTerm double reg, StoppingCondition stop) {
 		super(snapshot, featureCount, initVal, threshold, dom, alpha, lrate, reg, stop);
 	}
 

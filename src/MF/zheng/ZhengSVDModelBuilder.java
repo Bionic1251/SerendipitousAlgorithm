@@ -64,7 +64,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								@FeatureCount int featureCount,
 								@InitialFeatureValue double initVal,
-								@Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate,
+								@Nullable PreferenceDomain dom, @LearningRate double lrate,
 								@RegularizationTerm double reg, StoppingCondition stop, ItemItemModel itemItemModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
@@ -118,7 +118,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 					continue;
 				}
 				dissimilaritySum = dissimilaritySum / count;
-				if(Double.isNaN(dissimilaritySum)){
+				if (Double.isNaN(dissimilaritySum)) {
 					System.out.println(count + " !!!");
 				}
 				itemDissimilarityVector.set(itemId, dissimilaritySum);
@@ -166,71 +166,74 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 			featureInfo.add(fib.build());
 		}
 
-		double sum;
-		LongCollection itemIdCollection = snapshot.getItemIds();
-		LongCollection userIdCollection = snapshot.getUserIds();
 		TrainingLoopController controller = stoppingCondition.newLoop();
-		double maxW = 0;
 		while (controller.keepTraining(0.0)) {
-			sum = 0;
-
-			for (long userId : userIdCollection) {
-				Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
-				Map<Long, Double> userRatings = new HashMap<Long, Double>();
-				for (IndexedPreference preference : preferences) {
-					userRatings.put(preference.getItemId(), preference.getValue());
-				}
-				for (long itemId : itemIdCollection) {
-					double rating = 0.0;
-					if (userRatings.containsKey(itemId)) {
-						rating = userRatings.get(itemId);
-					}
-					int itemIndex = snapshot.itemIndex().getIndex(itemId);
-					int userIndex = snapshot.userIndex().getIndex(userId);
-					AVector item = itemFeatures.getRow(itemIndex);
-					AVector user = userFeatures.getRow(userIndex);
-					double prediction = item.dotProduct(user);
-					double dissimilarity = 0.0;
-					if (userItemDissimilarityMap.containsKey(userId)) {
-						SparseVector itemDissimilarityVector = userItemDissimilarityMap.get(userId);
-						if (itemDissimilarityVector.containsKey(itemId)) {
-							dissimilarity = itemDissimilarityVector.get(itemId);
-						}
-					}
-					double w = 1 - popMap.get(itemIndex) + dissimilarity;
-					double error = (rating - prediction) * w;
-					maxW = Math.max(w, maxW);
-					if (Double.isNaN(error) || Double.isInfinite(error)) {
-						System.out.printf("Yo");
-					}
-					sum += Math.abs(error);
-					for (int i = 0; i < featureCount; i++) {
-						double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
-						if (item.get(i) > 100 || user.get(i) > 100) {
-							System.out.println("item " + item.get(i));
-							System.out.println("user " + user.get(i));
-						}
-						if (Double.isNaN(val) || Double.isInfinite(val)) {
-							System.out.println("NaN");
-						}
-						item.set(i, val);
-
-						val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
-						if (Double.isNaN(val) || Double.isInfinite(val)) {
-							System.out.println("NaN");
-						}
-						user.set(i, val);
-					}
-				}
-			}
-			System.out.println("MAE " + sum);
+			train(userFeatures, itemFeatures);
 		}
-		System.out.println("MaxW" + maxW);
 
 		// Wrap the user/item matrices because we won't use or modify them again
 		return new ZhengSVDModel(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
+	}
+
+	private void train(Matrix userFeatures, Matrix itemFeatures) {
+		double sum = 0;
+		LongCollection itemIdCollection = snapshot.getItemIds();
+		LongCollection userIdCollection = snapshot.getUserIds();
+		for (long userId : userIdCollection) {
+			Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
+			Map<Long, Double> userRatings = new HashMap<Long, Double>();
+			for (IndexedPreference preference : preferences) {
+				userRatings.put(preference.getItemId(), preference.getValue());
+			}
+			for (long itemId : itemIdCollection) {
+				double rating = 0.0;
+				if (userRatings.containsKey(itemId)) {
+					rating = userRatings.get(itemId);
+				}
+				sum += trainFeatures(userFeatures, itemFeatures, itemId, userId, rating);
+			}
+		}
+		System.out.println("MAE " + sum / userIdCollection.size() / itemIdCollection.size());
+	}
+
+	private double trainFeatures(Matrix userFeatures, Matrix itemFeatures, long itemId, long userId, double rating) {
+		int itemIndex = snapshot.itemIndex().getIndex(itemId);
+		int userIndex = snapshot.userIndex().getIndex(userId);
+		AVector item = itemFeatures.getRow(itemIndex);
+		AVector user = userFeatures.getRow(userIndex);
+		double prediction = item.dotProduct(user);
+		double dissimilarity = 0.0;
+		if (userItemDissimilarityMap.containsKey(userId)) {
+			SparseVector itemDissimilarityVector = userItemDissimilarityMap.get(userId);
+			if (itemDissimilarityVector.containsKey(itemId)) {
+				dissimilarity = itemDissimilarityVector.get(itemId);
+			}
+		}
+		double w = 1 - popMap.get(itemIndex) + dissimilarity;
+		double error = (rating - prediction) * w;
+		if (Double.isNaN(error) || Double.isInfinite(error)) {
+			System.out.printf("Error is " + error);
+		}
+		for (int i = 0; i < featureCount; i++) {
+			double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
+			if (item.get(i) > 100 || user.get(i) > 100) {
+				System.out.println("item " + item.get(i));
+				System.out.println("user " + user.get(i));
+			}
+			if (Double.isNaN(val) || Double.isInfinite(val)) {
+				System.out.println("Val is" + val);
+			}
+			item.set(i, val);
+
+			val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
+			if (Double.isNaN(val) || Double.isInfinite(val)) {
+				System.out.println("Val is" + val);
+			}
+			user.set(i, val);
+		}
+		return Math.abs(error);
 	}
 }
