@@ -139,7 +139,7 @@ public class LuSVDModelBuilderBaysian implements Provider<LuSVDModel> {
 				}
 			}
 		}
-		System.out.println("Pairs count: " + count + "; Function value: " + func);
+		System.out.println("Pairs count: " + count + "; Function value: " + func / count);
 	}
 
 	private void trainPair(Matrix userFeatures, Matrix itemFeatures, IndexedPreference liked, IndexedPreference disliked) {
@@ -148,47 +148,45 @@ public class LuSVDModelBuilderBaysian implements Provider<LuSVDModel> {
 		AVector dislikedVec = itemFeatures.getRow(disliked.getItemIndex());
 
 		double likedPred = likedVec.dotProduct(user);
-		likedPred = domain.clampValue(likedPred);
 		double dislikedPred = dislikedVec.dotProduct(user);
+		double rawDiff = likedPred - dislikedPred;
+
+		likedPred = domain.clampValue(likedPred);
 		dislikedPred = domain.clampValue(dislikedPred);
 
+		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
 		double diff = likedPred - dislikedPred;
-		func += function(diff);
+		func += function(diff, pop);
 		if (diff > 0) {
 			count++;
+		}
+
+		if (rawDiff > domain.getMaximum() - domain.getMinimum()) {
+			return;
 		}
 
 		if (Double.isNaN(diff) || Double.isInfinite(diff)) {
 			System.out.println("diff is " + diff);
 		}
 
-
-		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
 		for (int i = 0; i < featureCount; i++) {
 			double der = getDerivative(user.get(i), pop, diff);
 			double val = likedVec.get(i) + learningRate * (der - regularization * likedVec.get(i));
-			if (Double.isNaN(val) || Double.isInfinite(val)) {
-				val = likedVec.get(i);
-				//System.out.println("val is " + val);
+			if (!Double.isNaN(val) && !Double.isInfinite(val)) {
+				likedVec.set(i, val);
 			}
-			likedVec.set(i, val);
 
 			der = getDerivative(-user.get(i), pop, diff);
 			val = dislikedVec.get(i) + learningRate * (der - regularization * dislikedVec.get(i));
-			if (Double.isNaN(val) || Double.isInfinite(val)) {
-				val = dislikedVec.get(i);
-				//System.out.println("val is " + val);
+			if (!Double.isNaN(val) && !Double.isInfinite(val)) {
+				dislikedVec.set(i, val);
 			}
-			dislikedVec.set(i, val);
-
 
 			der = getDerivative((likedVec.get(i) - dislikedVec.get(i)), pop, diff);
 			val = user.get(i) + learningRate * (der - regularization * user.get(i));
-			if (Double.isNaN(val) || Double.isInfinite(val)) {
-				val = user.get(i);
-				//System.out.println("val is " + val);
+			if (!Double.isNaN(val) && !Double.isInfinite(val)) {
+				user.set(i, val);
 			}
-			user.set(i, val);
 		}
 	}
 
@@ -196,7 +194,7 @@ public class LuSVDModelBuilderBaysian implements Provider<LuSVDModel> {
 		return a * Math.exp(diff) / (1 + Math.exp(diff)) * pop;
 	}
 
-	protected double function(double diff) {
-		return Math.log(1 + Math.exp(diff));
+	protected double function(double diff, double pop) {
+		return Math.log(1 + Math.exp(diff)) * pop;
 	}
 }

@@ -1,5 +1,7 @@
 package FunkSVD.lu;
 
+import annotation.Alpha;
+import annotation.Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -8,6 +10,7 @@ import mikera.vectorz.Vector;
 import org.apache.commons.lang3.time.StopWatch;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
+import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.iterative.TrainingLoopController;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
@@ -17,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.*;
@@ -37,15 +41,16 @@ import java.util.*;
  */
 public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	private static Logger logger = LoggerFactory.getLogger(LuFunkSVDModelBuilder.class);
-
-	private final double ALPHA = 0.5;
-	private final double MAX_VALUE = 5.0;
-	private final double MIN_VALUE = 0.0;
+	private int count;
+	private double func;
 
 	protected final int featureCount;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
 	protected final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
+	private final double threshold;
+	private final PreferenceDomain domain;
+	private final double alpha;
 
 	protected final LuFunkSVDUpdateRule rule;
 
@@ -53,11 +58,15 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	public LuFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								 @Transient @Nonnull LuFunkSVDUpdateRule rule,
 								 @FeatureCount int featureCount,
-								 @InitialFeatureValue double initVal) {
+								 @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom,
+								 @Alpha double alpha) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
 		this.rule = rule;
+		this.threshold = threshold;
+		domain = dom;
+		this.alpha = alpha;
 	}
 
 
@@ -191,64 +200,68 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 										Collection<IndexedPreference> ratings,
 										Vector userFeatureVector, Vector itemFeatureVector,
 										double trail) {
-		int count = 0;
+		count = 0;
+		func = 0;
 		LongCollection userIds = snapshot.getUserIds();
 		for (long usedId : userIds) {
 			Collection<IndexedPreference> userRatings = snapshot.getUserRatings(usedId);
 			for (IndexedPreference liked : userRatings) {
-				if (liked.getValue() <= 3.0) {
+				if (liked.getValue() <= threshold) {
 					continue;
 				}
 				for (IndexedPreference disliked : userRatings) {
-					if (disliked.getValue() > 3.0) {
+					if (disliked.getValue() > threshold) {
 						continue;
 					}
-
-					double uv = userFeatureVector.get(liked.getUserIndex());
-					double likedIV = itemFeatureVector.get(liked.getItemIndex());
-					double likedPred = estimates.get(liked) + uv * likedIV + trail;
-					likedPred = getClappedValue(likedPred);
-
-					double dislikedIV = itemFeatureVector.get(disliked.getItemIndex());
-					double dislikedPred = estimates.get(disliked) + uv * dislikedIV + trail;
-					dislikedPred = getClappedValue(dislikedPred);
-
-					double diff = likedPred - dislikedPred;
-					if (diff <= 0) {
-						count++;
-					}
-
-					if(diff >= MAX_VALUE - MIN_VALUE){
-						continue;
-					}
-
-					double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, ALPHA);
-					double itemDerivativeVal = uv * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
-					double userDerivativeVal = likedIV * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
-
-					double updateItemVal = (itemDerivativeVal - rule.getTrainingRegularization() * likedIV) * rule.getLearningRate();
-					double updateDisItemVal = (-itemDerivativeVal - rule.getTrainingRegularization() * dislikedIV) * rule.getLearningRate();
-					double updateUserVal = (userDerivativeVal - rule.getTrainingRegularization() * uv) * rule.getLearningRate();
-
-					userFeatureVector.addAt(liked.getUserIndex(), updateUserVal);
-					itemFeatureVector.addAt(liked.getItemIndex(), updateItemVal);
-					itemFeatureVector.addAt(disliked.getItemIndex(), updateDisItemVal);
+					trainPair(userFeatureVector, itemFeatureVector, liked, disliked, estimates, trail);
 				}
 			}
 		}
 
 
-		System.out.println("inc " + count);
+		System.out.println("Pairs count: " + count + "; Function value: " + func / count);
 		return 0.0;
 	}
 
-	private double getClappedValue(double value) {
-		if (value > MAX_VALUE) {
-			return MAX_VALUE;
-		} else if (value < MIN_VALUE) {
-			return MIN_VALUE;
+	private void trainPair(Vector userFeatureVector, Vector itemFeatureVector, IndexedPreference liked, IndexedPreference disliked, LuTrainingEstimator estimates, double trail) {
+		double uv = userFeatureVector.get(liked.getUserIndex());
+		double likedIV = itemFeatureVector.get(liked.getItemIndex());
+		double likedPred = estimates.get(liked) + uv * likedIV + trail;
+		double dislikedIV = itemFeatureVector.get(disliked.getItemIndex());
+		double dislikedPred = estimates.get(disliked) + uv * dislikedIV + trail;
+		double rawDiff = likedPred - dislikedPred;
+
+		dislikedPred = domain.clampValue(dislikedPred);
+		likedPred = domain.clampValue(likedPred);
+
+		double diff = likedPred - dislikedPred;
+		if (diff > 0) {
+			count++;
 		}
-		return value;
+		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
+		func += Math.log(1 + Math.exp(diff)) * pop;
+		if (rawDiff > domain.getMaximum() - domain.getMinimum()) {
+			return;
+		}
+
+		double itemDerivativeVal = uv * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
+		double userDerivativeVal = likedIV * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
+
+		double updateItemVal = (itemDerivativeVal - rule.getTrainingRegularization() * likedIV) * rule.getLearningRate();
+		double updateDisItemVal = (-itemDerivativeVal - rule.getTrainingRegularization() * dislikedIV) * rule.getLearningRate();
+		double updateUserVal = (userDerivativeVal - rule.getTrainingRegularization() * uv) * rule.getLearningRate();
+
+		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal)) {
+			itemFeatureVector.addAt(liked.getItemIndex(), updateItemVal);
+		}
+
+		if (!Double.isNaN(updateUserVal) && !Double.isInfinite(updateUserVal)) {
+			userFeatureVector.addAt(liked.getUserIndex(), updateUserVal);
+		}
+
+		if (!Double.isNaN(updateDisItemVal) && !Double.isInfinite(updateDisItemVal)) {
+			itemFeatureVector.addAt(disliked.getItemIndex(), updateDisItemVal);
+		}
 	}
 
 	/**

@@ -46,9 +46,6 @@ import java.util.*;
 public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	private static Logger logger = LoggerFactory.getLogger(ZhengSVDModelBuilder.class);
 
-	private int count;
-	private double func;
-
 	protected final int featureCount;
 	protected final double learningRate;
 	protected final double regularization;

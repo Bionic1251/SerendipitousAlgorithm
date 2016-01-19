@@ -22,6 +22,11 @@ public class LuSVDModelBuilderHinge extends LuSVDModelBuilderBaysian {
 	}
 
 	@Override
+	protected double function(double diff, double pop) {
+		return Math.max(0, diff) * pop;
+	}
+
+	@Override
 	protected double getDerivative(double a, double pop, double diff) {
 		if (diff < 0) {
 			return 0;
