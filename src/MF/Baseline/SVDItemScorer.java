@@ -1,4 +1,4 @@
-package zheng;
+package MF.Baseline;
 /*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
@@ -34,7 +34,6 @@ import org.grouplens.lenskit.data.event.Ratings;
 import org.grouplens.lenskit.data.history.History;
 import org.grouplens.lenskit.data.history.UserHistory;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
-import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.mf.svd.BiasedMFKernel;
 import org.grouplens.lenskit.mf.svd.DomainClampingKernel;
 import org.grouplens.lenskit.mf.svd.DotProductKernel;
@@ -49,7 +48,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Do recommendations and predictions based on SVD matrix factorization.
+ * Do recommendations and predictions based on Baseline matrix factorization.
  *
  * Recommendation is done based on folding-in.  The strategy is do a fold-in
  * operation as described in
@@ -58,18 +57,18 @@ import javax.inject.Inject;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class ZhengSVDItemScorer extends AbstractItemScorer {
-	private static final Logger logger = LoggerFactory.getLogger(ZhengSVDItemScorer.class);
-	protected final ZhengSVDModel model;
+public class SVDItemScorer extends AbstractItemScorer {
+	private static final Logger logger = LoggerFactory.getLogger(SVDItemScorer.class);
+	protected final SVDModel model;
 	protected final BiasedMFKernel kernel;
 	private UserEventDAO dao;
 	private final ItemScorer baselineScorer;
 	private final int featureCount;
 
 	@Inject
-	public ZhengSVDItemScorer(UserEventDAO dao, ZhengSVDModel model,
-							  @BaselineScorer ItemScorer baseline,
-							  @Nullable PreferenceDomain dom) {
+	public SVDItemScorer(UserEventDAO dao, SVDModel model,
+						 @BaselineScorer ItemScorer baseline,
+						 @Nullable PreferenceDomain dom) {
 		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;

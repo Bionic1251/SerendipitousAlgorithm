@@ -1,4 +1,4 @@
-package lu;
+package MF.lu;
 
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;

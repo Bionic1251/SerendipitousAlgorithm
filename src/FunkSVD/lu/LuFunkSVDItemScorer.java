@@ -1,4 +1,4 @@
-package spr;
+package FunkSVD.lu;
 /*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Do recommendations and predictions based on SVD matrix factorization.
+ * Do recommendations and predictions based on Baseline matrix factorization.
  *
  * Recommendation is done based on folding-in.  The strategy is do a fold-in
  * operation as described in
@@ -60,16 +60,16 @@ import javax.inject.Inject;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class SPRFunkSVDItemScorer extends AbstractItemScorer {
-	private static final Logger logger = LoggerFactory.getLogger(SPRFunkSVDItemScorer.class);
-	protected final SPRFunkSVDModel model;
+public class LuFunkSVDItemScorer extends AbstractItemScorer {
+	private static final Logger logger = LoggerFactory.getLogger(LuFunkSVDItemScorer.class);
+	protected final LuFunkSVDModel model;
 	protected final BiasedMFKernel kernel;
 	private UserEventDAO dao;
 	private final ItemScorer baselineScorer;
 	private final int featureCount;
 
 	@Nullable
-	private final SPRFunkSVDUpdateRule rule;
+	private final LuFunkSVDUpdateRule rule;
 
 	/**
 	 * Construct the item scorer.
@@ -84,10 +84,10 @@ public class SPRFunkSVDItemScorer extends AbstractItemScorer {
 	 *                 feature values based on their profile when scores are requested.
 	 */
 	@Inject
-	public SPRFunkSVDItemScorer(UserEventDAO dao, SPRFunkSVDModel model,
-								@BaselineScorer ItemScorer baseline,
-								@Nullable PreferenceDomain dom,
-								@Nullable @RuntimeUpdate SPRFunkSVDUpdateRule rule) {
+	public LuFunkSVDItemScorer(UserEventDAO dao, LuFunkSVDModel model,
+							   @BaselineScorer ItemScorer baseline,
+							   @Nullable PreferenceDomain dom,
+							   @Nullable @RuntimeUpdate LuFunkSVDUpdateRule rule) {
 		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;
@@ -104,7 +104,7 @@ public class SPRFunkSVDItemScorer extends AbstractItemScorer {
 	}
 
 	@Nullable
-	public SPRFunkSVDUpdateRule getUpdateRule() {
+	public LuFunkSVDUpdateRule getUpdateRule() {
 		return rule;
 	}
 
@@ -219,7 +219,7 @@ public class SPRFunkSVDItemScorer extends AbstractItemScorer {
 									  int feature, SparseVector itemTails) {
 		assert rule != null;
 
-		SPRFunkSVDUpdater updater = rule.createUpdater();
+		LuFunkSVDUpdater updater = rule.createUpdater();
 		for (VectorEntry e: ratings) {
 			final long iid = e.getKey();
 			final AVector ivec = model.getItemVector(iid);

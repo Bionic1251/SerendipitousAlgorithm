@@ -1,4 +1,4 @@
-package spr;
+package FunkSVD.lu;
 
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import mikera.matrixx.Matrix;
@@ -22,10 +22,10 @@ import javax.inject.Provider;
 import java.util.*;
 
 /**
- * SVD recommender builder using gradient descent (Funk SVD).
+ * Baseline recommender builder using gradient descent (Funk Baseline).
  * <p/>
  * <p>
- * This recommender builder constructs an SVD-based recommender using gradient
+ * This recommender builder constructs an Baseline-based recommender using gradient
  * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
  * Funk did. These are documented in
  * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
@@ -35,8 +35,8 @@ import java.util.*;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
-	private static Logger logger = LoggerFactory.getLogger(SPRFunkSVDModelBuilder.class);
+public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
+	private static Logger logger = LoggerFactory.getLogger(LuFunkSVDModelBuilder.class);
 
 	private final double ALPHA = 0.5;
 	private final double MAX_VALUE = 5.0;
@@ -47,13 +47,13 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 	protected final double initialValue;
 	protected final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
 
-	protected final SPRFunkSVDUpdateRule rule;
+	protected final LuFunkSVDUpdateRule rule;
 
 	@Inject
-	public SPRFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
-								  @Transient @Nonnull SPRFunkSVDUpdateRule rule,
-								  @FeatureCount int featureCount,
-								  @InitialFeatureValue double initVal) {
+	public LuFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
+								 @Transient @Nonnull LuFunkSVDUpdateRule rule,
+								 @FeatureCount int featureCount,
+								 @InitialFeatureValue double initVal) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -83,7 +83,7 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 	}
 
 	@Override
-	public SPRFunkSVDModel get() {
+	public LuFunkSVDModel get() {
 		populatePopMap();
 
 		int userCount = snapshot.getUserIds().size();
@@ -95,10 +95,10 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 		logger.debug("Learning rate is {}", rule.getLearningRate());
 		logger.debug("Regularization term is {}", rule.getTrainingRegularization());
 
-		logger.info("Building SVD with {} features for {} ratings",
+		logger.info("Building Baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
-		SPRTrainingEstimator estimates = rule.makeEstimator(snapshot);
+		LuTrainingEstimator estimates = rule.makeEstimator(snapshot);
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
 
@@ -134,7 +134,7 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 		}
 
 		// Wrap the user/item matrices because we won't use or modify them again
-		return new SPRFunkSVDModel(ImmutableMatrix.wrap(userFeatures),
+		return new LuFunkSVDModel(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
@@ -163,7 +163,7 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 	 * @see #doFeatureIteration(TrainingEstimator, Collection, Vector, Vector, double)
 	 * @see #summarizeFeature(AVector, AVector, FeatureInfo.Builder)
 	 */
-	protected void trainFeature(int feature, SPRTrainingEstimator estimates,
+	protected void trainFeature(int feature, LuTrainingEstimator estimates,
 								Vector userFeatureVector, Vector itemFeatureVector,
 								FeatureInfo.Builder fib) {
 		double rmse = Double.MAX_VALUE;
@@ -187,7 +187,7 @@ public class SPRFunkSVDModelBuilder implements Provider<SPRFunkSVDModel> {
 	 * @param trail             The sum of the remaining user-item-feature values.
 	 * @return The RMSE of the feature iteration.
 	 */
-	protected double doFeatureIteration(SPRTrainingEstimator estimates,
+	protected double doFeatureIteration(LuTrainingEstimator estimates,
 										Collection<IndexedPreference> ratings,
 										Vector userFeatureVector, Vector itemFeatureVector,
 										double trail) {

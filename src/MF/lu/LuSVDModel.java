@@ -1,4 +1,4 @@
-package lu;
+package MF.lu;
 
 import com.google.common.collect.ImmutableList;
 import mikera.matrixx.impl.ImmutableMatrix;

@@ -1,4 +1,4 @@
-package lu;
+package MF.lu;
 
 import annotation.Alpha;
 import annotation.Threshold;

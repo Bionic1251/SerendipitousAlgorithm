@@ -1,4 +1,4 @@
-package zheng;
+package MF.zheng;
 
 import annotation.Alpha;
 import it.unimi.dsi.fastutil.longs.LongCollection;
@@ -6,8 +6,6 @@ import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
 import mikera.vectorz.AVector;
 import mikera.vectorz.Vector;
-import org.grouplens.lenskit.collections.FastCollection;
-import org.grouplens.lenskit.collections.FastIterable;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
@@ -32,10 +30,10 @@ import javax.inject.Provider;
 import java.util.*;
 
 /**
- * SVD recommender builder using gradient descent (Funk SVD).
+ * Baseline recommender builder using gradient descent (Funk Baseline).
  * <p/>
  * <p>
- * This recommender builder constructs an SVD-based recommender using gradient
+ * This recommender builder constructs an Baseline-based recommender using gradient
  * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
  * Funk did. These are documented in
  * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
@@ -145,7 +143,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		int itemCount = snapshot.getItemIds().size();
 		Matrix itemFeatures = Matrix.create(itemCount, featureCount);
 
-		logger.info("Building SVD with {} features for {} ratings",
+		logger.info("Building Baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);

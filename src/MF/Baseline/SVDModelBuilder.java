@@ -1,7 +1,6 @@
-package SVD;
+package MF.Baseline;
 
 import annotation.Alpha;
-import annotation.Threshold;
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
 import mikera.vectorz.AVector;
@@ -27,10 +26,10 @@ import javax.inject.Provider;
 import java.util.*;
 
 /**
- * SVD recommender builder using gradient descent (Funk SVD).
+ * Baseline recommender builder using gradient descent (Funk Baseline).
  * <p/>
  * <p>
- * This recommender builder constructs an SVD-based recommender using gradient
+ * This recommender builder constructs an Baseline-based recommender using gradient
  * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
  * Funk did. These are documented in
  * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
@@ -42,9 +41,6 @@ import java.util.*;
  */
 public class SVDModelBuilder implements Provider<SVDModel> {
 	private static Logger logger = LoggerFactory.getLogger(SVDModelBuilder.class);
-
-	private int count;
-	private double func;
 
 	protected final int featureCount;
 	protected final double learningRate;
@@ -58,7 +54,7 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 	public SVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 						   @FeatureCount int featureCount,
 						   @InitialFeatureValue double initVal,
-						   @Nullable PreferenceDomain dom, @Alpha double alpha, @LearningRate double lrate,
+						   @Nullable PreferenceDomain dom, @LearningRate double lrate,
 						   @RegularizationTerm double reg, StoppingCondition stop) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
@@ -79,13 +75,11 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 		int itemCount = snapshot.getItemIds().size();
 		Matrix itemFeatures = Matrix.create(itemCount, featureCount);
 
-		logger.info("Building SVD with {} features for {} ratings",
+		logger.info("Building Baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
 
-		// Use scratch vectors for each feature for better cache locality
-		// Per-feature vectors are strided in the output matrices
 		Vector uvec = Vector.createLength(userCount);
 		Vector ivec = Vector.createLength(itemCount);
 

@@ -1,4 +1,4 @@
-package SVD;
+package MF.zheng;
 
 import com.google.common.collect.ImmutableList;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -13,22 +13,22 @@ import org.grouplens.lenskit.mf.svd.MFModel;
 import java.util.List;
 
 /**
- * Model for FunkSVD recommendation.  This extends the SVD model with clamping functions and
+ * Model for FunkSVD recommendation.  This extends the Baseline model with clamping functions and
  * information about the training of the features.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-@DefaultProvider(SVDModelBuilder.class)
+@DefaultProvider(ZhengSVDModelBuilder.class)
 @Shareable
-public final class SVDModel extends MFModel {
+public final class ZhengSVDModel extends MFModel {
 	private static final long serialVersionUID = 3L;
 
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
 
-	public SVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
-					IdIndexMapping uidx, IdIndexMapping iidx,
-					List<FeatureInfo> features) {
+	public ZhengSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
+						 IdIndexMapping uidx, IdIndexMapping iidx,
+						 List<FeatureInfo> features) {
 		super(umat, imat, uidx, iidx);
 
 		featureInfo = ImmutableList.copyOf(features);

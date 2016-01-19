@@ -1,4 +1,4 @@
-package test;/*
+package FunkSVD.lu;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -39,7 +39,7 @@ import java.io.Serializable;
  * @since 1.0
  */
 @Shareable
-public final class MyFunkSVDUpdateRule implements Serializable {
+public final class LuFunkSVDUpdateRule implements Serializable {
 	private static final long serialVersionUID = 2L;
 
 	private final double learningRate;
@@ -57,7 +57,7 @@ public final class MyFunkSVDUpdateRule implements Serializable {
 	 * @param stop  The stopping condition
 	 */
 	@Inject
-	public MyFunkSVDUpdateRule(@LearningRate double lrate,
+	public LuFunkSVDUpdateRule(@LearningRate double lrate,
 							   @RegularizationTerm double reg,
 							   @BaselineScorer ItemScorer bl,
 							   @Nullable PreferenceDomain dom,
@@ -74,8 +74,8 @@ public final class MyFunkSVDUpdateRule implements Serializable {
 	 *
 	 * @return The estimator to use.
 	 */
-	public MyTrainingEstimator makeEstimator(PreferenceSnapshot snapshot) {
-		return new MyTrainingEstimator(snapshot, baseline, domain);
+	public LuTrainingEstimator makeEstimator(PreferenceSnapshot snapshot) {
+		return new LuTrainingEstimator(snapshot, baseline, domain);
 	}
 
 	public double getLearningRate() {
@@ -99,7 +99,7 @@ public final class MyFunkSVDUpdateRule implements Serializable {
 		return stoppingCondition.newLoop();
 	}
 
-	public MyFunkSVDUpdater createUpdater() {
-		return new MyFunkSVDUpdater(this);
+	public LuFunkSVDUpdater createUpdater() {
+		return new LuFunkSVDUpdater(this);
 	}
 }
