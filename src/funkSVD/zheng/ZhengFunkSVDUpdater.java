@@ -1,4 +1,4 @@
-package funkSVD.lu;/*
+package funkSVD.zheng;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -22,8 +22,8 @@ package funkSVD.lu;/*
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 
 
-public final class LuFunkSVDUpdater {
-	private final LuFunkSVDUpdateRule updateRule;
+public final class ZhengFunkSVDUpdater {
+	private final ZhengFunkSVDUpdateRule updateRule;
 
 	private double error;
 	private double userFeatureValue;
@@ -31,7 +31,7 @@ public final class LuFunkSVDUpdater {
 	private double sse;
 	private int n;
 
-	LuFunkSVDUpdater(LuFunkSVDUpdateRule rule) {
+	ZhengFunkSVDUpdater(ZhengFunkSVDUpdateRule rule) {
 		updateRule = rule;
 	}
 

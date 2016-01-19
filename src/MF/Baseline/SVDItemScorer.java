@@ -1,4 +1,4 @@
-package MF.Baseline;
+package mf.Baseline;
 /*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.

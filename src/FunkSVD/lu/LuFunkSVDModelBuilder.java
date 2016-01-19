@@ -1,4 +1,4 @@
-package FunkSVD.lu;
+package funkSVD.lu;
 
 import annotation.Alpha;
 import annotation.Threshold;

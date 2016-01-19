@@ -1,6 +1,5 @@
-package MF.Baseline;
+package mf.Baseline;
 
-import annotation.Alpha;
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
 import mikera.vectorz.AVector;

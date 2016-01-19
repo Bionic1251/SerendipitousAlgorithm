@@ -1,4 +1,4 @@
-package funkSVD.lu;
+package funkSVD.zheng;
 /*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
@@ -60,16 +60,16 @@ import javax.inject.Inject;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class LuFunkSVDItemScorer extends AbstractItemScorer {
-	private static final Logger logger = LoggerFactory.getLogger(LuFunkSVDItemScorer.class);
-	protected final LuFunkSVDModel model;
+public class ZhengFunkSVDItemScorer extends AbstractItemScorer {
+	private static final Logger logger = LoggerFactory.getLogger(ZhengFunkSVDItemScorer.class);
+	protected final ZhengFunkSVDModel model;
 	protected final BiasedMFKernel kernel;
 	private UserEventDAO dao;
 	private final ItemScorer baselineScorer;
 	private final int featureCount;
 
 	@Nullable
-	private final LuFunkSVDUpdateRule rule;
+	private final ZhengFunkSVDUpdateRule rule;
 
 	/**
 	 * Construct the item scorer.
@@ -84,10 +84,10 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 	 *                 feature values based on their profile when scores are requested.
 	 */
 	@Inject
-	public LuFunkSVDItemScorer(UserEventDAO dao, LuFunkSVDModel model,
-							   @BaselineScorer ItemScorer baseline,
-							   @Nullable PreferenceDomain dom,
-							   @Nullable @RuntimeUpdate LuFunkSVDUpdateRule rule) {
+	public ZhengFunkSVDItemScorer(UserEventDAO dao, ZhengFunkSVDModel model,
+								  @BaselineScorer ItemScorer baseline,
+								  @Nullable PreferenceDomain dom,
+								  @Nullable @RuntimeUpdate ZhengFunkSVDUpdateRule rule) {
 		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;
@@ -104,7 +104,7 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 	}
 
 	@Nullable
-	public LuFunkSVDUpdateRule getUpdateRule() {
+	public ZhengFunkSVDUpdateRule getUpdateRule() {
 		return rule;
 	}
 
@@ -219,7 +219,7 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 									  int feature, SparseVector itemTails) {
 		assert rule != null;
 
-		LuFunkSVDUpdater updater = rule.createUpdater();
+		ZhengFunkSVDUpdater updater = rule.createUpdater();
 		for (VectorEntry e: ratings) {
 			final long iid = e.getKey();
 			final AVector ivec = model.getItemVector(iid);

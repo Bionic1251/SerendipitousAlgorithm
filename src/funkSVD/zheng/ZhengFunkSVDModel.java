@@ -1,4 +1,4 @@
-package mf.zheng;
+package funkSVD.zheng;
 
 import com.google.common.collect.ImmutableList;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -18,17 +18,17 @@ import java.util.List;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-@DefaultProvider(ZhengSVDModelBuilder.class)
+@DefaultProvider(ZhengFunkSVDModelBuilder.class)
 @Shareable
-public final class ZhengSVDModel extends MFModel {
+public final class ZhengFunkSVDModel extends MFModel {
 	private static final long serialVersionUID = 3L;
 
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
 
-	public ZhengSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
-						 IdIndexMapping uidx, IdIndexMapping iidx,
-						 List<FeatureInfo> features) {
+	public ZhengFunkSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
+							 IdIndexMapping uidx, IdIndexMapping iidx,
+							 List<FeatureInfo> features) {
 		super(umat, imat, uidx, iidx);
 
 		featureInfo = ImmutableList.copyOf(features);

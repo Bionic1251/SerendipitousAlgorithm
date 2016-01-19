@@ -1,4 +1,4 @@
-package funkSVD.lu;/*
+package funkSVD.zheng;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -29,19 +29,22 @@ import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Rating estimates used while training the predictor.  An estimator can be constructed
- * using {@link LuFunkSVDUpdateRule#makeEstimator(org.grouplens.lenskit.data.snapshot.PreferenceSnapshot)}.
+ * using {@link ZhengFunkSVDUpdateRule#makeEstimator(org.grouplens.lenskit.data.snapshot.PreferenceSnapshot)}.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  * @since 1.1
  */
-public final class LuTrainingEstimator {
+public final class ZhengTrainingEstimator {
 	private final Collection<IndexedPreference> ratings;
 	private final double[] estimates;
 	private final PreferenceDomain domain;
+	private final ItemScorer baseline;
 
 	/**
 	 * Initialize the training estimator.
@@ -50,10 +53,11 @@ public final class LuTrainingEstimator {
 	 * @param baseline The baseline predictor.
 	 * @param dom      The preference domain (for clamping).
 	 */
-	LuTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
+	ZhengTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
 		ratings = snap.getRatings();
 		domain = dom;
 		estimates = new double[ratings.size()];
+		this.baseline = baseline;
 
 		final LongCollection userIds = snap.getUserIds();
 		LongIterator userIter = userIds.iterator();
@@ -69,13 +73,8 @@ public final class LuTrainingEstimator {
 		}
 	}
 
-	/**
-	 * Get the estimate for a preference.
-	 * @param pref The preference.
-	 * @return The estimate.
-	 */
-	public double get(IndexedPreference pref) {
-		return estimates[pref.getIndex()];
+	public double get(long userId, long itemId) {
+		return baseline.score(userId, itemId);
 	}
 
 	/**

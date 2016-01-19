@@ -1,17 +1,17 @@
-package mf.zheng;
+package funkSVD.zheng;
 
+import annotation.Alpha;
+import annotation.Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
 import mikera.vectorz.AVector;
 import mikera.vectorz.Vector;
+import org.apache.commons.lang3.time.StopWatch;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
-import org.grouplens.lenskit.iterative.LearningRate;
-import org.grouplens.lenskit.iterative.RegularizationTerm;
-import org.grouplens.lenskit.iterative.StoppingCondition;
 import org.grouplens.lenskit.iterative.TrainingLoopController;
 import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
@@ -42,33 +42,34 @@ import java.util.*;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
-	private static Logger logger = LoggerFactory.getLogger(ZhengSVDModelBuilder.class);
+public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
+	private static Logger logger = LoggerFactory.getLogger(ZhengFunkSVDModelBuilder.class);
+	private int count;
+	private double func;
 
 	protected final int featureCount;
-	protected final double learningRate;
-	protected final double regularization;
-	private final PreferenceDomain domain;
-	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
 	private final ItemItemModel itemItemModel;
 	private final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
 	private final Map<Long, SparseVector> userItemDissimilarityMap = new HashMap<Long, SparseVector>();
+	private final PreferenceDomain domain;
+	private final double alpha;
+
+	protected final ZhengFunkSVDUpdateRule rule;
 
 	@Inject
-	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
-								@FeatureCount int featureCount,
-								@InitialFeatureValue double initVal,
-								@Nullable PreferenceDomain dom, @LearningRate double lrate,
-								@RegularizationTerm double reg, StoppingCondition stop, ItemItemModel itemItemModel) {
+	public ZhengFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
+									@Transient @Nonnull ZhengFunkSVDUpdateRule rule,
+									@FeatureCount int featureCount,
+									@InitialFeatureValue double initVal, @Nullable PreferenceDomain dom,
+									@Alpha double alpha, ItemItemModel itemItemModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
+		this.rule = rule;
 		domain = dom;
-		learningRate = lrate;
-		regularization = reg;
-		stoppingCondition = stop;
+		this.alpha = alpha;
 		this.itemItemModel = itemItemModel;
 	}
 
@@ -129,7 +130,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	}
 
 	@Override
-	public ZhengSVDModel get() {
+	public ZhengFunkSVDModel get() {
 		populateUserItemMap();
 		populatePopMap();
 
@@ -139,8 +140,13 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		int itemCount = snapshot.getItemIds().size();
 		Matrix itemFeatures = Matrix.create(itemCount, featureCount);
 
+		logger.debug("Learning rate is {}", rule.getLearningRate());
+		logger.debug("Regularization term is {}", rule.getTrainingRegularization());
+
 		logger.info("Building Baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
+
+		ZhengTrainingEstimator estimates = rule.makeEstimator(snapshot);
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
 
@@ -150,31 +156,84 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		Vector ivec = Vector.createLength(itemCount);
 
 		for (int f = 0; f < featureCount; f++) {
+			logger.debug("Training feature {}", f);
+			StopWatch timer = new StopWatch();
+			timer.start();
+
 			uvec.fill(initialValue);
 			ivec.fill(initialValue);
 
+			FeatureInfo.Builder fib = new FeatureInfo.Builder(f);
+			trainFeature(f, estimates, uvec, ivec, fib);
+			summarizeFeature(uvec, ivec, fib);
+			featureInfo.add(fib.build());
+
+			// Update each rating's cached value to accommodate the feature values.
+			estimates.update(uvec, ivec);
+
+			// And store the data into the matrix
 			userFeatures.setColumn(f, uvec);
 			assert Math.abs(userFeatures.getColumnView(f).elementSum() - uvec.elementSum()) < 1.0e-4 : "user column sum matches";
 			itemFeatures.setColumn(f, ivec);
 			assert Math.abs(itemFeatures.getColumnView(f).elementSum() - ivec.elementSum()) < 1.0e-4 : "item column sum matches";
 
-			FeatureInfo.Builder fib = new FeatureInfo.Builder(f);
-			featureInfo.add(fib.build());
-		}
-
-		TrainingLoopController controller = stoppingCondition.newLoop();
-		while (controller.keepTraining(0.0)) {
-			train(userFeatures, itemFeatures);
+			timer.stop();
+			logger.info("Finished feature {} in {}", f, timer);
 		}
 
 		// Wrap the user/item matrices because we won't use or modify them again
-		return new ZhengSVDModel(ImmutableMatrix.wrap(userFeatures),
+		return new ZhengFunkSVDModel(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
 	}
 
-	private void train(Matrix userFeatures, Matrix itemFeatures) {
+	/**
+	 * Train a feature using a collection of ratings.  This method iteratively calls {@link
+	 * #doFeatureIteration  to train
+	 * the feature.  It can be overridden to customize the feature training strategy.
+	 * <p/>
+	 * <p>We use the estimator to maintain the estimate up through a particular feature value,
+	 * rather than recomputing the entire kernel value every time.  This hopefully speeds up training.
+	 * It means that we always tell the updater we are training feature 0, but use a subvector that
+	 * starts with the current feature.</p>
+	 *
+	 * @param feature           The number of the current feature.
+	 * @param estimates         The current estimator.  This method is <b>not</b> expected to update the
+	 *                          estimator.
+	 * @param userFeatureVector The user feature values.  This has been initialized to the initial value,
+	 *                          and may be reused between features.
+	 * @param itemFeatureVector The item feature values.  This has been initialized to the initial value,
+	 *                          and may be reused between features.
+	 * @param fib               The feature info builder. This method is only expected to add information
+	 *                          about its training rounds to the builder; the caller takes care of feature
+	 *                          number and summary data.
+	 * @see #doFeatureIteration(TrainingEstimator, Collection, Vector, Vector, double)
+	 * @see #summarizeFeature(AVector, AVector, FeatureInfo.Builder)
+	 */
+	protected void trainFeature(int feature, ZhengTrainingEstimator estimates,
+								Vector userFeatureVector, Vector itemFeatureVector,
+								FeatureInfo.Builder fib) {
+		double trail = initialValue * initialValue * (featureCount - feature - 1);
+		TrainingLoopController controller = rule.getTrainingLoopController();
+		while (controller.keepTraining(0.0)) {
+			doFeatureIteration(estimates, userFeatureVector, itemFeatureVector, trail);
+			fib.addTrainingRound(0.0);
+		}
+	}
+
+	/**
+	 * Do a single feature iteration.
+	 *
+	 * @param estimates         The estimates.
+	 * @param userFeatureVector The user column vector for the current feature.
+	 * @param itemFeatureVector The item column vector for the current feature.
+	 * @param trail             The sum of the remaining user-item-feature values.
+	 * @return The RMSE of the feature iteration.
+	 */
+	protected void doFeatureIteration(ZhengTrainingEstimator estimates,
+									  Vector userFeatureVector, Vector itemFeatureVector,
+									  double trail) {
 		double sum = 0;
 		LongCollection itemIdCollection = snapshot.getItemIds();
 		LongCollection userIdCollection = snapshot.getUserIds();
@@ -189,18 +248,17 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 				if (userRatings.containsKey(itemId)) {
 					rating = userRatings.get(itemId);
 				}
-				sum += trainFeatures(userFeatures, itemFeatures, itemId, userId, rating);
+				sum += trainFeatures(itemFeatureVector, userFeatureVector, itemId, userId, rating, estimates, trail);
 			}
 		}
 		System.out.println("MAE " + sum / userIdCollection.size() / itemIdCollection.size());
 	}
 
-	private double trainFeatures(Matrix userFeatures, Matrix itemFeatures, long itemId, long userId, double rating) {
+	private double trainFeatures(Vector item, Vector user, long itemId, long userId, double rating, ZhengTrainingEstimator estimates, double trail) {
 		int itemIndex = snapshot.itemIndex().getIndex(itemId);
 		int userIndex = snapshot.userIndex().getIndex(userId);
-		AVector item = itemFeatures.getRow(itemIndex);
-		AVector user = userFeatures.getRow(userIndex);
-		double prediction = item.dotProduct(user);
+		double prediction = estimates.get(userId, itemId) + item.get(itemIndex) * user.get(userIndex) + trail;
+		prediction = domain.clampValue(prediction);
 		double dissimilarity = 0.0;
 		if (userItemDissimilarityMap.containsKey(userId)) {
 			SparseVector itemDissimilarityVector = userItemDissimilarityMap.get(userId);
@@ -213,23 +271,40 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		if (Double.isNaN(error) || Double.isInfinite(error)) {
 			System.out.printf("Error is " + error);
 		}
-		for (int i = 0; i < featureCount; i++) {
-			double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
-			if (item.get(i) > 100 || user.get(i) > 100) {
-				System.out.println("item " + item.get(i));
-				System.out.println("user " + user.get(i));
-			}
-			if (Double.isNaN(val) || Double.isInfinite(val)) {
-				System.out.println("Val is" + val);
-			}
-			item.set(i, val);
+		double learningRate = rule.getLearningRate();
+		double regularization = rule.getTrainingRegularization();
 
-			val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
-			if (Double.isNaN(val) || Double.isInfinite(val)) {
-				System.out.println("Val is" + val);
-			}
-			user.set(i, val);
+		double updateItemVal = (error * user.get(userIndex) - regularization * item.get(itemIndex)) * learningRate;
+		double updateUserVal = (error * item.get(itemIndex) - regularization * user.get(userIndex)) * learningRate;
+
+		double updatedItemValue = updateItemVal + item.get(itemIndex);
+		double updatedUserValue = updateUserVal + user.get(userIndex);
+
+		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal) && isInRange(updatedItemValue)) {
+			item.addAt(itemIndex, updateItemVal);
 		}
+
+		if (!Double.isNaN(updateUserVal) && !Double.isInfinite(updateUserVal) && isInRange(updatedUserValue)) {
+			user.addAt(userIndex, updateUserVal);
+		}
+
 		return Math.abs(error);
+	}
+
+	private boolean isInRange(double value){
+		return value < 1000 && value > -1000;
+	}
+
+	/**
+	 * Add a feature's summary to the feature info builder.
+	 *
+	 * @param ufv The user values.
+	 * @param ifv The item values.
+	 * @param fib The feature info builder.
+	 */
+	protected void summarizeFeature(AVector ufv, AVector ifv, FeatureInfo.Builder fib) {
+		fib.setUserAverage(ufv.elementSum() / ufv.length())
+				.setItemAverage(ifv.elementSum() / ifv.length())
+				.setSingularValue(ufv.magnitude() * ifv.magnitude());
 	}
 }

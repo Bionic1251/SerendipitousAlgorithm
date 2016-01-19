@@ -1,4 +1,4 @@
-package MF.Baseline;
+package mf.Baseline;
 
 import com.google.common.collect.ImmutableList;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -13,7 +13,7 @@ import org.grouplens.lenskit.mf.svd.MFModel;
 import java.util.List;
 
 /**
- * Model for FunkSVD recommendation.  This extends the Baseline model with clamping functions and
+ * Model for funkSVD recommendation.  This extends the Baseline model with clamping functions and
  * information about the training of the features.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>

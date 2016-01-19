@@ -1,4 +1,4 @@
-package funkSVD.lu;/*
+package funkSVD.zheng;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -39,7 +39,7 @@ import java.io.Serializable;
  * @since 1.0
  */
 @Shareable
-public final class LuFunkSVDUpdateRule implements Serializable {
+public final class ZhengFunkSVDUpdateRule implements Serializable {
 	private static final long serialVersionUID = 2L;
 
 	private final double learningRate;
@@ -57,11 +57,11 @@ public final class LuFunkSVDUpdateRule implements Serializable {
 	 * @param stop  The stopping condition
 	 */
 	@Inject
-	public LuFunkSVDUpdateRule(@LearningRate double lrate,
-							   @RegularizationTerm double reg,
-							   @BaselineScorer ItemScorer bl,
-							   @Nullable PreferenceDomain dom,
-							   StoppingCondition stop) {
+	public ZhengFunkSVDUpdateRule(@LearningRate double lrate,
+								  @RegularizationTerm double reg,
+								  @BaselineScorer ItemScorer bl,
+								  @Nullable PreferenceDomain dom,
+								  StoppingCondition stop) {
 		learningRate = lrate;
 		trainingRegularization = reg;
 		baseline = bl;
@@ -74,8 +74,8 @@ public final class LuFunkSVDUpdateRule implements Serializable {
 	 *
 	 * @return The estimator to use.
 	 */
-	public LuTrainingEstimator makeEstimator(PreferenceSnapshot snapshot) {
-		return new LuTrainingEstimator(snapshot, baseline, domain);
+	public ZhengTrainingEstimator makeEstimator(PreferenceSnapshot snapshot) {
+		return new ZhengTrainingEstimator(snapshot, baseline, domain);
 	}
 
 	public double getLearningRate() {
@@ -99,7 +99,7 @@ public final class LuFunkSVDUpdateRule implements Serializable {
 		return stoppingCondition.newLoop();
 	}
 
-	public LuFunkSVDUpdater createUpdater() {
-		return new LuFunkSVDUpdater(this);
+	public ZhengFunkSVDUpdater createUpdater() {
+		return new ZhengFunkSVDUpdater(this);
 	}
 }
