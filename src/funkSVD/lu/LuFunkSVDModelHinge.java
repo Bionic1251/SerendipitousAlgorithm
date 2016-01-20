@@ -18,17 +18,17 @@ import java.util.List;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-@DefaultProvider(LuFunkSVDModelBuilder.class)
+@DefaultProvider(LuFunkSVDModelBuilderHinge.class)
 @Shareable
-public final class LuFunkSVDModel extends MFModel {
+public final class LuFunkSVDModelHinge extends MFModel {
 	private static final long serialVersionUID = 3L;
 
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
 
-	public LuFunkSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
-						  IdIndexMapping uidx, IdIndexMapping iidx,
-						  List<FeatureInfo> features) {
+	public LuFunkSVDModelHinge(ImmutableMatrix umat, ImmutableMatrix imat,
+							   IdIndexMapping uidx, IdIndexMapping iidx,
+							   List<FeatureInfo> features) {
 		super(umat, imat, uidx, iidx);
 
 		featureInfo = ImmutableList.copyOf(features);
@@ -41,7 +41,7 @@ public final class LuFunkSVDModel extends MFModel {
 	}
 
 	/**
-	 * Get the {@link FeatureInfo} for a particular feature.
+	 * Get the {@link org.grouplens.lenskit.mf.funksvd.FeatureInfo} for a particular feature.
 	 * @param f The feature number.
 	 * @return The feature's summary information.
 	 */

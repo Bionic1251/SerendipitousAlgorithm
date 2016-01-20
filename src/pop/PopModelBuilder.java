@@ -31,6 +31,7 @@ public class PopModelBuilder implements Provider<PopModel> {
 		}
 		List<Container> containerList = new ArrayList<Container>(itemMap.values());
 		Collections.sort(containerList);
+		//Collections.reverse(containerList);
 
 		List<Long> list = new ArrayList<Long>();
 		for(int i = 0; i < containerList.size(); i++){
@@ -59,14 +60,16 @@ public class PopModelBuilder implements Provider<PopModel> {
 
 		@Override
 		public int compareTo(Container o) {
-			Double averageRating1 = ratingSum / ratingNumber;
+			return ratingNumber.compareTo(o.ratingNumber);
+
+			/*Double averageRating1 = ratingSum / ratingNumber;
 			Double averageRating2 = o.ratingSum / o.ratingNumber;
 
 			int res = averageRating1.compareTo(averageRating2);
 			if (res == 0) {
 				return ratingNumber.compareTo(o.ratingNumber);
 			}
-			return res;
+			return res;*/
 		}
 	}
 }

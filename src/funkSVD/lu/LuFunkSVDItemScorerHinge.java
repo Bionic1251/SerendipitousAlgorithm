@@ -60,9 +60,9 @@ import javax.inject.Inject;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class LuFunkSVDItemScorer extends AbstractItemScorer {
-	private static final Logger logger = LoggerFactory.getLogger(LuFunkSVDItemScorer.class);
-	protected final LuFunkSVDModel model;
+public class LuFunkSVDItemScorerHinge extends AbstractItemScorer {
+	private static final Logger logger = LoggerFactory.getLogger(LuFunkSVDItemScorerHinge.class);
+	protected final LuFunkSVDModelHinge model;
 	protected final BiasedMFKernel kernel;
 	private UserEventDAO dao;
 	private final ItemScorer baselineScorer;
@@ -84,10 +84,10 @@ public class LuFunkSVDItemScorer extends AbstractItemScorer {
 	 *                 feature values based on their profile when scores are requested.
 	 */
 	@Inject
-	public LuFunkSVDItemScorer(UserEventDAO dao, LuFunkSVDModel model,
-							   @BaselineScorer ItemScorer baseline,
-							   @Nullable PreferenceDomain dom,
-							   @Nullable @RuntimeUpdate LuFunkSVDUpdateRule rule) {
+	public LuFunkSVDItemScorerHinge(UserEventDAO dao, LuFunkSVDModelHinge model,
+									@BaselineScorer ItemScorer baseline,
+									@Nullable PreferenceDomain dom,
+									@Nullable @RuntimeUpdate LuFunkSVDUpdateRule rule) {
 		// FIXME Unify requirement on update rule and DAO
 		this.dao = dao;
 		this.model = model;

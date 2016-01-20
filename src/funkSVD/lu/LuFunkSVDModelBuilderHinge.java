@@ -1,4 +1,4 @@
-package funkSVD.zheng;
+package funkSVD.lu;
 
 import annotation.Alpha;
 import annotation.Threshold;
@@ -13,12 +13,9 @@ import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.iterative.TrainingLoopController;
-import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
-import org.grouplens.lenskit.vectors.MutableSparseVector;
-import org.grouplens.lenskit.vectors.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,109 +25,61 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.*;
 
-/**
- * Baseline recommender builder using gradient descent (Funk Baseline).
- * <p/>
- * <p>
- * This recommender builder constructs an Baseline-based recommender using gradient
- * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
- * Funk did. These are documented in
- * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
- * This at Home</a>. This implementation is based in part on
- * <a href="http://www.timelydevelopment.com/demos/NetflixPrize.aspx">Timely
- * Development's sample code</a>.</p>
- *
- * @author <a href="http://www.grouplens.org">GroupLens Research</a>
- */
-public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
-	private static Logger logger = LoggerFactory.getLogger(ZhengFunkSVDModelBuilder.class);
+public class LuFunkSVDModelBuilderHinge implements Provider<LuFunkSVDModelHinge> {
+
+	private static Logger logger = LoggerFactory.getLogger(LuFunkSVDModelBuilderHinge.class);
 	private int count;
 	private double func;
+	private final int RANGE = 10000;
 
 	protected final int featureCount;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
-	private final ItemItemModel itemItemModel;
-	private final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
-	private final Map<Long, SparseVector> userItemDissimilarityMap = new HashMap<Long, SparseVector>();
+	protected final Map<Integer, Double> popMap = new HashMap<Integer, Double>();
+	private final double threshold;
 	private final PreferenceDomain domain;
-	private final int RANGE = 10000;
+	private final double alpha;
 
-	protected final ZhengFunkSVDUpdateRule rule;
+	protected final LuFunkSVDUpdateRule rule;
 
 	@Inject
-	public ZhengFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
-									@Transient @Nonnull ZhengFunkSVDUpdateRule rule,
-									@FeatureCount int featureCount,
-									@InitialFeatureValue double initVal, @Nullable PreferenceDomain dom,
-									ItemItemModel itemItemModel) {
+	public LuFunkSVDModelBuilderHinge(@Transient @Nonnull PreferenceSnapshot snapshot,
+									  @Transient @Nonnull LuFunkSVDUpdateRule rule,
+									  @FeatureCount int featureCount,
+									  @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom,
+									  @Alpha double alpha) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
 		this.rule = rule;
+		this.threshold = threshold;
 		domain = dom;
-		this.itemItemModel = itemItemModel;
+		this.alpha = alpha;
 	}
-
 
 	private void populatePopMap() {
 		Collection<IndexedPreference> ratings = snapshot.getRatings();
+		double max = 0.0;
 		for (IndexedPreference pref : ratings) {
 			double val = 0.0;
 			if (popMap.containsKey(pref.getItemIndex())) {
 				val = popMap.get(pref.getItemIndex());
 			}
 			val++;
+			if (val > max) {
+				max = val;
+			}
 			popMap.put(pref.getItemIndex(), val);
 		}
 		for (Integer key : popMap.keySet()) {
 			double val = popMap.get(key);
-			val /= snapshot.getUserIds().size();
+			val /= max;
 			popMap.put(key, val);
 		}
 	}
 
-	private void populateUserItemMap() {
-		LongCollection userIds = snapshot.getUserIds();
-		LongCollection itemIds = snapshot.getItemIds();
-		int size = userIds.size();
-		int maxCount = 0;
-		for (long userId : userIds) {
-			MutableSparseVector itemDissimilarityVector = MutableSparseVector.create(itemIds, 0.0);
-			Collection<IndexedPreference> ratings = snapshot.getUserRatings(userId);
-			for (long itemId : itemIds) {
-				double dissimilaritySum = 0;
-				int count = 0;
-				for (IndexedPreference rating : ratings) {
-					SparseVector vector = itemItemModel.getNeighbors(itemId);
-					if (rating.getItemId() == itemId || !vector.containsKey(rating.getItemId())) {
-						continue;
-					}
-					dissimilaritySum += 1 - vector.get(rating.getItemId());
-					count++;
-				}
-				maxCount = Math.max(maxCount, count);
-				if (count == 0) {
-					continue;
-				}
-				dissimilaritySum = dissimilaritySum / count;
-				if (Double.isNaN(dissimilaritySum)) {
-					System.out.println(count + " !!!");
-				}
-				itemDissimilarityVector.set(itemId, dissimilaritySum);
-			}
-			userItemDissimilarityMap.put(userId, itemDissimilarityVector);
-			size--;
-			if (size % 100 == 0) {
-				System.out.println(size + " left");
-			}
-		}
-		System.out.println("Count " + maxCount);
-	}
-
 	@Override
-	public ZhengFunkSVDModel get() {
-		populateUserItemMap();
+	public LuFunkSVDModelHinge get() {
 		populatePopMap();
 
 		int userCount = snapshot.getUserIds().size();
@@ -145,7 +94,7 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 		logger.info("Building Baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
-		ZhengTrainingEstimator estimates = rule.makeEstimator(snapshot);
+		LuTrainingEstimator estimates = rule.makeEstimator(snapshot);
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
 
@@ -181,7 +130,7 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 		}
 
 		// Wrap the user/item matrices because we won't use or modify them again
-		return new ZhengFunkSVDModel(ImmutableMatrix.wrap(userFeatures),
+		return new LuFunkSVDModelHinge(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
@@ -210,14 +159,18 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 	 * @see #doFeatureIteration(TrainingEstimator, Collection, Vector, Vector, double)
 	 * @see #summarizeFeature(AVector, AVector, FeatureInfo.Builder)
 	 */
-	protected void trainFeature(int feature, ZhengTrainingEstimator estimates,
+	protected void trainFeature(int feature, LuTrainingEstimator estimates,
 								Vector userFeatureVector, Vector itemFeatureVector,
 								FeatureInfo.Builder fib) {
+		System.out.println("Feature " + feature);
+		double rmse = Double.MAX_VALUE;
 		double trail = initialValue * initialValue * (featureCount - feature - 1);
 		TrainingLoopController controller = rule.getTrainingLoopController();
-		while (controller.keepTraining(0.0)) {
-			doFeatureIteration(estimates, userFeatureVector, itemFeatureVector, trail);
-			fib.addTrainingRound(0.0);
+		Collection<IndexedPreference> ratings = snapshot.getRatings();
+		while (controller.keepTraining(rmse)) {
+			rmse = doFeatureIteration(estimates, ratings, userFeatureVector, itemFeatureVector, trail);
+			fib.addTrainingRound(rmse);
+			logger.trace("iteration {} finished with RMSE {}", controller.getIterationCount(), rmse);
 		}
 	}
 
@@ -225,69 +178,94 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 	 * Do a single feature iteration.
 	 *
 	 * @param estimates         The estimates.
+	 * @param ratings           The ratings to train on.
 	 * @param userFeatureVector The user column vector for the current feature.
 	 * @param itemFeatureVector The item column vector for the current feature.
 	 * @param trail             The sum of the remaining user-item-feature values.
 	 * @return The RMSE of the feature iteration.
 	 */
-	protected void doFeatureIteration(ZhengTrainingEstimator estimates,
-									  Vector userFeatureVector, Vector itemFeatureVector,
-									  double trail) {
-		double sum = 0;
-		LongCollection itemIdCollection = snapshot.getItemIds();
-		LongCollection userIdCollection = snapshot.getUserIds();
-		for (long userId : userIdCollection) {
-			Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
-			Map<Long, Double> userRatings = new HashMap<Long, Double>();
-			for (IndexedPreference preference : preferences) {
-				userRatings.put(preference.getItemId(), preference.getValue());
-			}
-			for (long itemId : itemIdCollection) {
-				double rating = 0.0;
-				if (userRatings.containsKey(itemId)) {
-					rating = userRatings.get(itemId);
+	protected double doFeatureIteration(LuTrainingEstimator estimates,
+										Collection<IndexedPreference> ratings,
+										Vector userFeatureVector, Vector itemFeatureVector,
+										double trail) {
+		count = 0;
+		func = 0;
+		LongCollection userIds = snapshot.getUserIds();
+		for (long usedId : userIds) {
+			Collection<IndexedPreference> userRatings = snapshot.getUserRatings(usedId);
+			for (IndexedPreference liked : userRatings) {
+				if (liked.getValue() <= threshold) {
+					continue;
 				}
-				sum += trainFeatures(itemFeatureVector, userFeatureVector, itemId, userId, rating, estimates, trail);
+				for (IndexedPreference disliked : userRatings) {
+					if (disliked.getValue() > threshold) {
+						continue;
+					}
+					trainPair(userFeatureVector, itemFeatureVector, liked, disliked, estimates, trail);
+				}
 			}
 		}
-		System.out.println("MAE " + sum / userIdCollection.size() / itemIdCollection.size());
+
+
+		System.out.println("Pairs count: " + count + "; Function value: " + func / count);
+		return 0.0;
 	}
 
-	private double trainFeatures(Vector item, Vector user, long itemId, long userId, double rating, ZhengTrainingEstimator estimates, double trail) {
-		int itemIndex = snapshot.itemIndex().getIndex(itemId);
-		int userIndex = snapshot.userIndex().getIndex(userId);
-		double prediction = estimates.get(userId, itemId) + item.get(itemIndex) * user.get(userIndex) + trail;
-		prediction = domain.clampValue(prediction);
-		double dissimilarity = 0.0;
-		if (userItemDissimilarityMap.containsKey(userId)) {
-			SparseVector itemDissimilarityVector = userItemDissimilarityMap.get(userId);
-			if (itemDissimilarityVector.containsKey(itemId)) {
-				dissimilarity = itemDissimilarityVector.get(itemId);
-			}
+	private void trainPair(Vector userFeatureVector, Vector itemFeatureVector, IndexedPreference liked, IndexedPreference disliked, LuTrainingEstimator estimates, double trail) {
+		double uv = userFeatureVector.get(liked.getUserIndex());
+		double likedIV = itemFeatureVector.get(liked.getItemIndex());
+		double likedPred = estimates.get(liked) + uv * likedIV + trail;
+		double dislikedIV = itemFeatureVector.get(disliked.getItemIndex());
+		double dislikedPred = estimates.get(disliked) + uv * dislikedIV + trail;
+		//double rawDiff = likedPred - dislikedPred;
+
+		dislikedPred = domain.clampValue(dislikedPred);
+		likedPred = domain.clampValue(likedPred);
+
+		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
+		double diff = likedPred - dislikedPred;
+		func += function(diff, pop);
+		if (diff > 0) {
+			count++;
+			//return;
 		}
-		double w = 1 - popMap.get(itemIndex) + dissimilarity;
-		double error = (rating - prediction) * w;
-		if (Double.isNaN(error) || Double.isInfinite(error)) {
-			System.out.printf("Error is " + error);
-		}
-		double learningRate = rule.getLearningRate();
-		double regularization = rule.getTrainingRegularization();
+		/*if (rawDiff > domain.getMaximum() - domain.getMinimum()) {
+			return;
+		}*/
 
-		double updateItemVal = (error * user.get(userIndex) - regularization * item.get(itemIndex)) * learningRate;
-		double updateUserVal = (error * item.get(itemIndex) - regularization * user.get(userIndex)) * learningRate;
+		double itemDerivativeVal = getDerivative(uv, pop, diff);
+		double userDerivativeVal = getDerivative(likedIV, pop, diff);
 
-		double updatedItemValue = updateItemVal + item.get(itemIndex);
-		double updatedUserValue = updateUserVal + user.get(userIndex);
+		double updateItemVal = (itemDerivativeVal - rule.getTrainingRegularization() * likedIV) * rule.getLearningRate();
+		double updateDisItemVal = (-itemDerivativeVal - rule.getTrainingRegularization() * dislikedIV) * rule.getLearningRate();
+		double updateUserVal = (userDerivativeVal - rule.getTrainingRegularization() * uv) * rule.getLearningRate();
 
-		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal) && isInRange(updatedItemValue)) {
-			item.addAt(itemIndex, updateItemVal);
+		double updatedLikeItemValue = updateItemVal + likedIV;
+		double updatedDisItemValue = updateItemVal + dislikedIV;
+		double updatedUserValue = updateUserVal + uv;
+
+		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal) && isInRange(updatedLikeItemValue)) {
+			itemFeatureVector.addAt(liked.getItemIndex(), updateItemVal);
 		}
 
 		if (!Double.isNaN(updateUserVal) && !Double.isInfinite(updateUserVal) && isInRange(updatedUserValue)) {
-			user.addAt(userIndex, updateUserVal);
+			userFeatureVector.addAt(liked.getUserIndex(), updateUserVal);
 		}
 
-		return Math.abs(error);
+		if (!Double.isNaN(updateDisItemVal) && !Double.isInfinite(updateDisItemVal) && isInRange(updatedDisItemValue)) {
+			itemFeatureVector.addAt(disliked.getItemIndex(), updateDisItemVal);
+		}
+	}
+
+	protected double getDerivative(double a, double pop, double diff) {
+		if (diff < 0) {
+			return 0;
+		}
+		return pop * a;
+	}
+
+	protected double function(double diff, double pop) {
+		return Math.max(0, diff) * pop;
 	}
 
 	private boolean isInRange(double value){

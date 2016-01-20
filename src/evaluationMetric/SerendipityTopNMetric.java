@@ -10,7 +10,6 @@ import org.grouplens.lenskit.eval.data.traintest.TTDataSet;
 import org.grouplens.lenskit.eval.metrics.AbstractMetric;
 import org.grouplens.lenskit.eval.metrics.ResultColumn;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
-import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
 import org.grouplens.lenskit.eval.traintest.TestUser;
 import org.grouplens.lenskit.knn.item.model.ItemItemBuildContext;
 import org.grouplens.lenskit.knn.item.model.ItemItemBuildContextProvider;
@@ -25,7 +24,7 @@ import java.util.*;
 public class SerendipityTopNMetric extends AbstractMetric<MeanAccumulator, SerendipityTopNMetric.Result, SerendipityTopNMetric.Result> {
 	private Map<Long, Set<Long>> expectedMap;
 	private Set<Long> defaultExpectedItems;
-	private final int serendipitousItemsNumber;
+	private final int expectedItemsNumber;
 	private final int evaluationListSize;
 	private final ItemSelector goodItems;
 	private final ItemSelector candidates;
@@ -37,7 +36,7 @@ public class SerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Seren
 		this.evaluationListSize = listSize;
 		this.goodItems = goodItems;
 		this.suffix = suffix;
-		serendipitousItemsNumber = number;
+		expectedItemsNumber = number;
 		this.candidates = candidates;
 		this.exclude = exclude;
 	}
@@ -113,7 +112,7 @@ public class SerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Seren
 		}
 		Collections.sort(expectedItemContaners);
 		Collections.reverse(expectedItemContaners);
-		for (int i = 0; i < serendipitousItemsNumber; i++) {
+		for (int i = 0; i < expectedItemsNumber; i++) {
 			expectedItems.add(expectedItemContaners.get(i).id);
 		}
 		defaultExpectedItems = expectedItems;

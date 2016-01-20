@@ -39,10 +39,11 @@ import java.util.*;
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
-	private static Logger logger = LoggerFactory.getLogger(LuFunkSVDModelBuilder.class);
+public class LuFunkSVDModelBuilderBaysian implements Provider<LuFunkSVDModelBaysian> {
+	private static Logger logger = LoggerFactory.getLogger(LuFunkSVDModelBuilderBaysian.class);
 	private int count;
 	private double func;
+	private final int RANGE = 10000;
 
 	protected final int featureCount;
 	protected final PreferenceSnapshot snapshot;
@@ -55,11 +56,11 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	protected final LuFunkSVDUpdateRule rule;
 
 	@Inject
-	public LuFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
-								 @Transient @Nonnull LuFunkSVDUpdateRule rule,
-								 @FeatureCount int featureCount,
-								 @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom,
-								 @Alpha double alpha) {
+	public LuFunkSVDModelBuilderBaysian(@Transient @Nonnull PreferenceSnapshot snapshot,
+										@Transient @Nonnull LuFunkSVDUpdateRule rule,
+										@FeatureCount int featureCount,
+										@InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom,
+										@Alpha double alpha) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -92,7 +93,7 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	}
 
 	@Override
-	public LuFunkSVDModel get() {
+	public LuFunkSVDModelBaysian get() {
 		populatePopMap();
 
 		int userCount = snapshot.getUserIds().size();
@@ -143,7 +144,7 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 		}
 
 		// Wrap the user/item matrices because we won't use or modify them again
-		return new LuFunkSVDModel(ImmutableMatrix.wrap(userFeatures),
+		return new LuFunkSVDModelBaysian(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
 				featureInfo);
@@ -175,6 +176,7 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	protected void trainFeature(int feature, LuTrainingEstimator estimates,
 								Vector userFeatureVector, Vector itemFeatureVector,
 								FeatureInfo.Builder fib) {
+		System.out.println("Feature " + feature);
 		double rmse = Double.MAX_VALUE;
 		double trail = initialValue * initialValue * (featureCount - feature - 1);
 		TrainingLoopController controller = rule.getTrainingLoopController();
@@ -229,39 +231,56 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 		double likedPred = estimates.get(liked) + uv * likedIV + trail;
 		double dislikedIV = itemFeatureVector.get(disliked.getItemIndex());
 		double dislikedPred = estimates.get(disliked) + uv * dislikedIV + trail;
-		double rawDiff = likedPred - dislikedPred;
+		//double rawDiff = likedPred - dislikedPred;
 
 		dislikedPred = domain.clampValue(dislikedPred);
 		likedPred = domain.clampValue(likedPred);
 
+		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
 		double diff = likedPred - dislikedPred;
+		func += function(diff, pop);
 		if (diff > 0) {
 			count++;
-		}
-		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
-		func += Math.log(1 + Math.exp(diff)) * pop;
-		if (rawDiff > domain.getMaximum() - domain.getMinimum()) {
 			return;
 		}
+		/*if (rawDiff > domain.getMaximum() - domain.getMinimum()) {
+			return;
+		}*/
 
-		double itemDerivativeVal = uv * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
-		double userDerivativeVal = likedIV * Math.exp(diff) / (Math.exp(diff) + 1) * pop;
+		double itemDerivativeVal = getDerivative(uv, pop, diff);
+		double userDerivativeVal = getDerivative(likedIV, pop, diff);
 
 		double updateItemVal = (itemDerivativeVal - rule.getTrainingRegularization() * likedIV) * rule.getLearningRate();
 		double updateDisItemVal = (-itemDerivativeVal - rule.getTrainingRegularization() * dislikedIV) * rule.getLearningRate();
 		double updateUserVal = (userDerivativeVal - rule.getTrainingRegularization() * uv) * rule.getLearningRate();
 
-		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal)) {
+		double updatedLikeItemValue = updateItemVal + likedIV;
+		double updatedDisItemValue = updateItemVal + dislikedIV;
+		double updatedUserValue = updateUserVal + uv;
+
+		if (!Double.isNaN(updateItemVal) && !Double.isInfinite(updateItemVal) && isInRange(updatedLikeItemValue)) {
 			itemFeatureVector.addAt(liked.getItemIndex(), updateItemVal);
 		}
 
-		if (!Double.isNaN(updateUserVal) && !Double.isInfinite(updateUserVal)) {
+		if (!Double.isNaN(updateUserVal) && !Double.isInfinite(updateUserVal) && isInRange(updatedUserValue)) {
 			userFeatureVector.addAt(liked.getUserIndex(), updateUserVal);
 		}
 
-		if (!Double.isNaN(updateDisItemVal) && !Double.isInfinite(updateDisItemVal)) {
+		if (!Double.isNaN(updateDisItemVal) && !Double.isInfinite(updateDisItemVal) && isInRange(updatedDisItemValue)) {
 			itemFeatureVector.addAt(disliked.getItemIndex(), updateDisItemVal);
 		}
+	}
+
+	protected double getDerivative(double a, double pop, double diff) {
+		return a * Math.exp(diff) / (1 + Math.exp(diff)) * pop;
+	}
+
+	protected double function(double diff, double pop) {
+		return Math.log(1 + Math.exp(diff)) * pop;
+	}
+
+	private boolean isInRange(double value){
+		return value < RANGE && value > -RANGE;
 	}
 
 	/**
