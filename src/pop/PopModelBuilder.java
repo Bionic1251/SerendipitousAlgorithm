@@ -29,18 +29,10 @@ public class PopModelBuilder implements Provider<PopModel> {
 			container.addRating(rating.getValue());
 			itemMap.put(rating.getItemId(), container);
 		}
-		List<Container> containerList = new ArrayList<Container>(itemMap.values());
-		Collections.sort(containerList);
-		//Collections.reverse(containerList);
-
-		List<Long> list = new ArrayList<Long>();
-		for(int i = 0; i < containerList.size(); i++){
-			list.add(containerList.get(i).getId());
-		}
-		return new PopModel(list);
+		return new PopModel(itemMap);
 	}
 
-	private class Container implements Comparable<Container> {
+	public static class Container implements Comparable<Container> {
 		private Long id;
 		private Double ratingSum = 0.0;
 		private Integer ratingNumber = 0;
@@ -52,6 +44,10 @@ public class PopModelBuilder implements Provider<PopModel> {
 		public void addRating(double rating) {
 			ratingSum += rating;
 			ratingNumber++;
+		}
+
+		public Integer getRatingNumber() {
+			return ratingNumber;
 		}
 
 		public Long getId() {

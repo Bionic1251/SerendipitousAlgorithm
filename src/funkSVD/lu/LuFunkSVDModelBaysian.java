@@ -13,7 +13,7 @@ import org.grouplens.lenskit.mf.svd.MFModel;
 import java.util.List;
 
 /**
- * Model for funkSVD recommendation.  This extends the Baseline model with clamping functions and
+ * Model for funkSVD recommendation.  This extends the baseline model with clamping functions and
  * information about the training of the features.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>

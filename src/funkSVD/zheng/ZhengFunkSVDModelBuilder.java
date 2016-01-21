@@ -29,10 +29,10 @@ import javax.inject.Provider;
 import java.util.*;
 
 /**
- * Baseline recommender builder using gradient descent (Funk Baseline).
+ * baseline recommender builder using gradient descent (Funk baseline).
  * <p/>
  * <p>
- * This recommender builder constructs an Baseline-based recommender using gradient
+ * This recommender builder constructs an baseline-based recommender using gradient
  * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
  * Funk did. These are documented in
  * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
@@ -142,7 +142,7 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 		logger.debug("Learning rate is {}", rule.getLearningRate());
 		logger.debug("Regularization term is {}", rule.getTrainingRegularization());
 
-		logger.info("Building Baseline with {} features for {} ratings",
+		logger.info("Building baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		ZhengTrainingEstimator estimates = rule.makeEstimator(snapshot);

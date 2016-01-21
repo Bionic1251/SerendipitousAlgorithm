@@ -4,7 +4,7 @@ import evaluationMetric.SerendipityTopNMetric;
 import funkSVD.lu.LuFunkSVDItemScorerBaysian;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import mf.Baseline.SVDItemScorer;
+import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
 import org.grouplens.lenskit.ItemScorer;
@@ -142,7 +142,7 @@ public class ExperimentRunner {
 		SVDBaseline.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		SVDBaseline.set(FeatureCount.class).to(FEATURE_COUNT);
 		SVDBaseline.set(IterationCount.class).to(ITERATION_COUNT);
-		evaluator.addAlgorithm("Baseline", SVDBaseline);
+		evaluator.addAlgorithm("baseline", SVDBaseline);
 
 		LenskitConfiguration ZhengSVD = new LenskitConfiguration();
 		ZhengSVD.bind(ItemScorer.class).to(ZhengSVDItemScorer.class);

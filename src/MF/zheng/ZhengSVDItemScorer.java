@@ -48,7 +48,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Do recommendations and predictions based on Baseline matrix factorization.
+ * Do recommendations and predictions based on baseline matrix factorization.
  *
  * Recommendation is done based on folding-in.  The strategy is do a fold-in
  * operation as described in
@@ -112,7 +112,7 @@ public class ZhengSVDItemScorer extends AbstractItemScorer {
 	 * @param user    The user ID.
 	 * @param ratings The user's ratings.
 	 * @param items   The target items.
-	 * @return Baseline predictions for all items either in the target set or the set of
+	 * @return baseline predictions for all items either in the target set or the set of
 	 *         rated items.
 	 */
 	private MutableSparseVector initialEstimates(long user, SparseVector ratings, LongSortedSet items) {

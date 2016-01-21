@@ -1,4 +1,4 @@
-package mf.Baseline;
+package mf.baseline;
 
 import mikera.matrixx.Matrix;
 import mikera.matrixx.impl.ImmutableMatrix;
@@ -25,10 +25,10 @@ import javax.inject.Provider;
 import java.util.*;
 
 /**
- * Baseline recommender builder using gradient descent (Funk Baseline).
+ * baseline recommender builder using gradient descent (Funk baseline).
  * <p/>
  * <p>
- * This recommender builder constructs an Baseline-based recommender using gradient
+ * This recommender builder constructs an baseline-based recommender using gradient
  * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
  * Funk did. These are documented in
  * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
@@ -73,7 +73,7 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 		int itemCount = snapshot.getItemIds().size();
 		Matrix itemFeatures = Matrix.create(itemCount, featureCount);
 
-		logger.info("Building Baseline with {} features for {} ratings",
+		logger.info("Building baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
@@ -134,7 +134,7 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 				}
 				user.set(i, val);
 			}
-			System.out.println("MAE " + sum / snapshot.getRatings().size());
 		}
+		System.out.println("MAE " + sum / snapshot.getRatings().size());
 	}
 }

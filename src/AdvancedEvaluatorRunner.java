@@ -1,7 +1,9 @@
+import adamopoulos.AdaItemScorer;
+import annotation.RatingPredictor;
 import funkSVD.lu.LuFunkSVDItemScorerBaysian;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import mf.Baseline.SVDItemScorer;
+import mf.baseline.SVDItemScorer;
 import annotation.Alpha;
 import annotation.Threshold;
 import evaluationMetric.SerendipityTopNMetric;
@@ -49,9 +51,7 @@ public class AdvancedEvaluatorRunner {
 	private static final int MY_HOLDOUT_NUMBER = 3;
 	private static final int HOLDOUT_NUMBER = 10;
 	private static final int MY_AT_N = 5;
-	private static final int AT_N = 5;
-	private static final int MY_N_MAX = 5;
-	private static final int N_MAX = 100;
+	private static final int AT_N = 10;
 	private static final int MY_SERENDIPITOUS_ITEMS_NUMBER = 2;
 	private static final int SERENDIPITOUS_ITEMS_NUMBER = 100;
 	private static final double THRESHOLD = 3.0;
@@ -104,9 +104,29 @@ public class AdvancedEvaluatorRunner {
 		SimpleEvaluator evaluator = new SimpleEvaluator();
 		setEvaluator(evaluator);
 
-		LenskitConfiguration ada = new LenskitConfiguration();
-		ada.bind(ItemScorer.class).to(RandomItemScorer.class);
-		evaluator.addAlgorithm("Random", ada);
+		LenskitConfiguration rnd = new LenskitConfiguration();
+		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
+		//evaluator.addAlgorithm("Random", rnd);
+
+		LenskitConfiguration adaSVD = new LenskitConfiguration();
+		adaSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
+		adaSVD.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		adaSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		adaSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		adaSVD.set(FeatureCount.class).to(5);
+		adaSVD.set(IterationCount.class).to(500);
+		adaSVD.set(Threshold.class).to(THRESHOLD);
+		evaluator.addAlgorithm("AdaSVD", adaSVD);
+
+		LenskitConfiguration adaFunkSVD = new LenskitConfiguration();
+		adaFunkSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
+		adaFunkSVD.bind(RatingPredictor.class, ItemScorer.class).to(FunkSVDItemScorer.class);
+		adaFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		adaFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		adaFunkSVD.set(FeatureCount.class).to(5);
+		adaFunkSVD.set(IterationCount.class).to(500);
+		adaFunkSVD.set(Threshold.class).to(THRESHOLD);
+		//evaluator.addAlgorithm("AdaFunkSVD", adaFunkSVD);
 
 		LenskitConfiguration ZhengFunkSVD = new LenskitConfiguration();
 		ZhengFunkSVD.bind(ItemScorer.class).to(ZhengFunkSVDItemScorer.class);
@@ -134,7 +154,7 @@ public class AdvancedEvaluatorRunner {
 		FunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		FunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		FunkSVD.set(FeatureCount.class).to(5);
-		FunkSVD.set(IterationCount.class).to(500);
+		FunkSVD.set(IterationCount.class).to(3000);
 		//evaluator.addAlgorithm("funkSVD", FunkSVD);
 
 		LenskitConfiguration LuSVD = new LenskitConfiguration();
@@ -154,7 +174,7 @@ public class AdvancedEvaluatorRunner {
 		SVDBaseline.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		SVDBaseline.set(FeatureCount.class).to(5);
 		SVDBaseline.set(IterationCount.class).to(500);
-		//evaluator.addAlgorithm("Baseline", SVDBaseline);
+		//evaluator.addAlgorithm("SVDBaseline", SVDBaseline);
 
 		LenskitConfiguration ZhengSVD = new LenskitConfiguration();
 		ZhengSVD.bind(ItemScorer.class).to(ZhengSVDItemScorer.class);
@@ -168,13 +188,13 @@ public class AdvancedEvaluatorRunner {
 
 		LenskitConfiguration POP = new LenskitConfiguration();
 		POP.bind(ItemScorer.class).to(PopItemScorer.class);
-		evaluator.addAlgorithm("POP", POP);
+		//evaluator.addAlgorithm("POP", POP);
 
 		LenskitConfiguration itemItem = new LenskitConfiguration();
 		itemItem.bind(ItemScorer.class).to(ItemItemScorer.class);
 		itemItem.bind(BaselineScorer.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		itemItem.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
-		evaluator.addAlgorithm("itemItem", itemItem);
+		//evaluator.addAlgorithm("itemItem", itemItem);
 
 		addMetrics(evaluator);
 
@@ -197,13 +217,20 @@ public class AdvancedEvaluatorRunner {
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(THRESHOLD));
 		ItemSelector candidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems()), ItemSelectors.testItems());
 		ItemSelector exclude = ItemSelectors.trainingItems();
-		for (int i = at_n; i <= 20; i += 5) {
+
+		String suffix = at_n + "";
+		//evaluator.addMetric(new RMSEPredictMetric());
+		evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, at_n, candidates, exclude, threshold));
+		evaluator.addMetric(new NDCGTopNMetric("", suffix, at_n, candidates, exclude));
+		evaluator.addMetric(new SerendipityTopNMetric(suffix, at_n, serendipitousNumber, candidates, exclude, threshold));
+
+		/*for (int i = at_n; i <= 20; i += 5) {
 			String suffix = i + "";
 			//evaluator.addMetric(new RMSEPredictMetric());
 			evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, i, candidates, exclude, threshold));
 			evaluator.addMetric(new NDCGTopNMetric("", suffix, i, candidates, exclude));
 			evaluator.addMetric(new SerendipityTopNMetric(suffix, i, serendipitousNumber, candidates, exclude, threshold));
-		}
+		}*/
 	}
 
 	private static LongSet getPopItems() {

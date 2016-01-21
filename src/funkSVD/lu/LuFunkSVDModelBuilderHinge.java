@@ -91,7 +91,7 @@ public class LuFunkSVDModelBuilderHinge implements Provider<LuFunkSVDModelHinge>
 		logger.debug("Learning rate is {}", rule.getLearningRate());
 		logger.debug("Regularization term is {}", rule.getTrainingRegularization());
 
-		logger.info("Building Baseline with {} features for {} ratings",
+		logger.info("Building baseline with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		LuTrainingEstimator estimates = rule.makeEstimator(snapshot);
