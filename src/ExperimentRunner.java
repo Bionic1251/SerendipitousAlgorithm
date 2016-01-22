@@ -1,6 +1,6 @@
 import annotation.Alpha;
 import annotation.Threshold;
-import evaluationMetric.SerendipityTopNMetric;
+import evaluationMetric.PopSerendipityTopNMetric;
 import funkSVD.lu.LuFunkSVDItemScorerBaysian;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -191,7 +191,7 @@ public class ExperimentRunner {
 			String suffix = prefix + "." + i;
 			evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, i, candidates, exclude, threshold));
 			evaluator.addMetric(new NDCGTopNMetric("", suffix, i, candidates, exclude));
-			evaluator.addMetric(new SerendipityTopNMetric(suffix, i, EXPECTED_ITEMS_NUMBER, candidates, exclude, threshold));
+			evaluator.addMetric(new PopSerendipityTopNMetric(suffix, i, EXPECTED_ITEMS_NUMBER, candidates, exclude, threshold));
 		}
 	}
 

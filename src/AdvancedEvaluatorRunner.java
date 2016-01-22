@@ -1,12 +1,13 @@
 import adamopoulos.AdaItemScorer;
 import annotation.RatingPredictor;
+import evaluationMetric.PopSerendipityTopNMetric;
+import evaluationMetric.SerendipityTopNMetric;
 import funkSVD.lu.LuFunkSVDItemScorerBaysian;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import mf.baseline.SVDItemScorer;
 import annotation.Alpha;
 import annotation.Threshold;
-import evaluationMetric.SerendipityTopNMetric;
 import mf.lu.LuSVDItemScorer;
 import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.baseline.BaselineScorer;
@@ -37,6 +38,8 @@ import org.grouplens.lenskit.knn.item.ItemItemScorer;
 import org.grouplens.lenskit.mf.funksvd.*;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
+import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
 import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import org.hamcrest.Matchers;
@@ -44,7 +47,9 @@ import pop.PopItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
 import random.RandomItemScorer;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.util.*;
 
 public class AdvancedEvaluatorRunner {
 	private static final int CROSSFOLD_NUMBER = 1;
@@ -53,11 +58,13 @@ public class AdvancedEvaluatorRunner {
 	private static final int MY_AT_N = 5;
 	private static final int AT_N = 10;
 	private static final int MY_SERENDIPITOUS_ITEMS_NUMBER = 2;
-	private static final int SERENDIPITOUS_ITEMS_NUMBER = 100;
+	private static final int SERENDIPITOUS_ITEMS_NUMBER = 40;
 	private static final double THRESHOLD = 3.0;
 	private static final String MY_DATASET = "D:\\bigdata\\movielens\\fake\\all_ratings_extended";
 	private static final String SMALL_DATASET = "D:\\bigdata\\movielens\\ml-100k\\u.data";
-	private static final String BIG_DATASET = "D:\\bigdata\\movielens\\ml-1m\\ratings.dat";
+	private static final String SMALL_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\u.item";
+	private static final String BIG_DATASET = "D:\\bigdata\\movielens\\hetrec\\user_ratedmovies-timestamps.dat";
+	private static final String BIG_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\u.item";
 	private static final String TRAIN_TEST_FOLDER_NAME = "task";
 	private static final String OUTPUT_PATH = "./results/out.csv";
 	private static final String OUTPUT_USER_PATH = "./results/user.csv";
@@ -72,6 +79,7 @@ public class AdvancedEvaluatorRunner {
 	private static final String STATE = SMALL;
 
 	private static String path;
+	private static String contentPath;
 	private static DelimitedColumnEventFormat eventFormat;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
@@ -83,10 +91,12 @@ public class AdvancedEvaluatorRunner {
 		} else if (STATE.equals(SMALL)) {
 			holdout = HOLDOUT_NUMBER;
 			path = SMALL_DATASET;
+			contentPath = SMALL_DATASET_CONTENT;
 		} else if (STATE.equals(BIG)) {
-			eventFormat.setDelimiter("::");
+			//eventFormat.setDelimiter("::");
 			holdout = HOLDOUT_NUMBER;
 			path = BIG_DATASET;
+			contentPath = BIG_DATASET_CONTENT;
 		}
 		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(path), eventFormat), new PreferenceDomain(MIN, MAX));
 		CrossfoldTask task = new CrossfoldTask(TRAIN_TEST_FOLDER_NAME);
@@ -104,6 +114,12 @@ public class AdvancedEvaluatorRunner {
 		SimpleEvaluator evaluator = new SimpleEvaluator();
 		setEvaluator(evaluator);
 
+		prepare();
+
+		LenskitConfiguration POP = new LenskitConfiguration();
+		POP.bind(ItemScorer.class).to(PopItemScorer.class);
+		evaluator.addAlgorithm("POP", POP);
+
 		LenskitConfiguration rnd = new LenskitConfiguration();
 		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
 		//evaluator.addAlgorithm("Random", rnd);
@@ -114,9 +130,10 @@ public class AdvancedEvaluatorRunner {
 		adaSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		adaSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		adaSVD.set(FeatureCount.class).to(5);
-		adaSVD.set(IterationCount.class).to(500);
+		adaSVD.set(IterationCount.class).to(3000);
 		adaSVD.set(Threshold.class).to(THRESHOLD);
-		evaluator.addAlgorithm("AdaSVD", adaSVD);
+		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
+		//evaluator.addAlgorithm("AdaSVD", adaSVD);
 
 		LenskitConfiguration adaFunkSVD = new LenskitConfiguration();
 		adaFunkSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
@@ -124,8 +141,9 @@ public class AdvancedEvaluatorRunner {
 		adaFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		adaFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		adaFunkSVD.set(FeatureCount.class).to(5);
-		adaFunkSVD.set(IterationCount.class).to(500);
+		adaFunkSVD.set(IterationCount.class).to(3000);
 		adaFunkSVD.set(Threshold.class).to(THRESHOLD);
+		adaFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		//evaluator.addAlgorithm("AdaFunkSVD", adaFunkSVD);
 
 		LenskitConfiguration ZhengFunkSVD = new LenskitConfiguration();
@@ -173,7 +191,7 @@ public class AdvancedEvaluatorRunner {
 		SVDBaseline.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		SVDBaseline.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		SVDBaseline.set(FeatureCount.class).to(5);
-		SVDBaseline.set(IterationCount.class).to(500);
+		SVDBaseline.set(IterationCount.class).to(3000);
 		//evaluator.addAlgorithm("SVDBaseline", SVDBaseline);
 
 		LenskitConfiguration ZhengSVD = new LenskitConfiguration();
@@ -185,10 +203,6 @@ public class AdvancedEvaluatorRunner {
 		ZhengSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		ZhengSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		//evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
-
-		LenskitConfiguration POP = new LenskitConfiguration();
-		POP.bind(ItemScorer.class).to(PopItemScorer.class);
-		//evaluator.addAlgorithm("POP", POP);
 
 		LenskitConfiguration itemItem = new LenskitConfiguration();
 		itemItem.bind(ItemScorer.class).to(ItemItemScorer.class);
@@ -222,7 +236,8 @@ public class AdvancedEvaluatorRunner {
 		//evaluator.addMetric(new RMSEPredictMetric());
 		evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, at_n, candidates, exclude, threshold));
 		evaluator.addMetric(new NDCGTopNMetric("", suffix, at_n, candidates, exclude));
-		evaluator.addMetric(new SerendipityTopNMetric(suffix, at_n, serendipitousNumber, candidates, exclude, threshold));
+		evaluator.addMetric(new PopSerendipityTopNMetric(suffix, at_n, serendipitousNumber, candidates, exclude, threshold));
+		evaluator.addMetric(new SerendipityTopNMetric("cor" + suffix, at_n, serendipitousNumber, candidates, exclude, threshold, itemContentMap, 500));
 
 		/*for (int i = at_n; i <= 20; i += 5) {
 			String suffix = i + "";
@@ -246,5 +261,68 @@ public class AdvancedEvaluatorRunner {
 			items.close();
 		}
 		return accum.finishSet();
+	}
+
+	private static int[] termDocFreq;
+	private static Map<Long, SparseVector> itemContentMap;
+
+	private static void prepare() {
+		itemContentMap = new HashMap<Long, SparseVector>();
+		Map<Long, BitSet> vecMap = getVectors();
+		for (Map.Entry<Long, BitSet> entry : vecMap.entrySet()) {
+			SparseVector vector = vecByBitSet(entry.getValue(), vecMap.size());
+			itemContentMap.put(entry.getKey(), vector);
+		}
+	}
+
+	private static SparseVector vecByBitSet(BitSet set, int docNum) {
+		Set<Long> keys = new HashSet<Long>();
+		for (int i = 0; i < termDocFreq.length; i++) {
+			keys.add((long) i);
+		}
+		MutableSparseVector vector = MutableSparseVector.create(keys);
+		for (int i = 0; i < termDocFreq.length; i++) {
+			if (set.get(i)) {
+				double tfidf = getTFIDF(docNum, i);
+				vector.set((long) i, tfidf);
+			}
+		}
+		return vector;
+	}
+
+	private static double getTFIDF(int docNum, int termNumber) {
+		double tf = 1.0 / termDocFreq.length;
+		double idf = Math.log((double) docNum / termDocFreq[termNumber]);
+		return tf * idf;
+	}
+
+	private static Map<Long, BitSet> getVectors() {
+		Map<Long, BitSet> vecMap = new HashMap<Long, BitSet>();
+		int boolLen = 23, boolStart = 5;
+		termDocFreq = new int[boolLen - boolStart + 1];
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(contentPath));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] vector = line.split("\\|");
+					Long id = Long.valueOf(vector[0]);
+					BitSet bitSet = new BitSet(boolLen - boolStart + 1);
+					for (int i = boolStart; i <= boolLen; i++) {
+						if (Integer.valueOf(vector[i]) != 0) {
+							bitSet.set(i - boolStart);
+							termDocFreq[i - boolStart]++;
+						}
+					}
+					vecMap.put(id, bitSet);
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return vecMap;
 	}
 }

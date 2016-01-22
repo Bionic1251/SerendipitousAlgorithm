@@ -26,6 +26,10 @@ public class PopModel implements Serializable {
 		return itemMap.get(itemId).getRatingNumber();
 	}
 
+	public Map<Long, PopModelBuilder.Container> getItemMap() {
+		return itemMap;
+	}
+
 	public List<Long> getItemList() {
 		List<PopModelBuilder.Container> containerList = new ArrayList<PopModelBuilder.Container>(itemMap.values());
 		Collections.sort(containerList);

@@ -38,11 +38,11 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 	@Override
 	public AdaModel get() {
 		AdaModel model = createModel();
-		countError(model);
-		for (int i = 0; i < 2; i++) {
+		//countError(model);
+		//for (int i = 0; i < 2; i++) {
 			learnParameters(model);
-			countError(model);
-		}
+			//countError(model);
+		//}
 		return model;
 	}
 
@@ -141,7 +141,7 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		double globalInternalDissimilarity = 0;
 		for (Long userId : users) {
 			count++;
-			if (count % 100 == 0) {
+			if (count % 50 == 0) {
 				System.out.println(count + " users processed");
 			}
 			int internalCount = 0;
