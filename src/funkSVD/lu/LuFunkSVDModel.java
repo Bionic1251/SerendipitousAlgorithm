@@ -12,23 +12,15 @@ import org.grouplens.lenskit.mf.svd.MFModel;
 
 import java.util.List;
 
-/**
- * Model for funkSVD recommendation.  This extends the baseline model with clamping functions and
- * information about the training of the features.
- *
- * @author <a href="http://www.grouplens.org">GroupLens Research</a>
- */
-@DefaultProvider(LuFunkSVDModelBuilderHinge.class)
+@DefaultProvider(LuFunkSVDModelBuilder.class)
 @Shareable
-public final class LuFunkSVDModelHinge extends MFModel {
-	private static final long serialVersionUID = 3L;
-
+public final class LuFunkSVDModel extends MFModel {
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
 
-	public LuFunkSVDModelHinge(ImmutableMatrix umat, ImmutableMatrix imat,
-							   IdIndexMapping uidx, IdIndexMapping iidx,
-							   List<FeatureInfo> features) {
+	public LuFunkSVDModel(ImmutableMatrix umat, ImmutableMatrix imat,
+						  IdIndexMapping uidx, IdIndexMapping iidx,
+						  List<FeatureInfo> features) {
 		super(umat, imat, uidx, iidx);
 
 		featureInfo = ImmutableList.copyOf(features);
@@ -40,19 +32,6 @@ public final class LuFunkSVDModelHinge extends MFModel {
 		averageUser = ImmutableVector.wrap(means);
 	}
 
-	/**
-	 * Get the {@link org.grouplens.lenskit.mf.funksvd.FeatureInfo} for a particular feature.
-	 * @param f The feature number.
-	 * @return The feature's summary information.
-	 */
-	public FeatureInfo getFeatureInfo(int f) {
-		return featureInfo.get(f);
-	}
-
-	/**
-	 * Get the metadata about all features.
-	 * @return The feature metadata.
-	 */
 	public List<FeatureInfo> getFeatureInfo() {
 		return featureInfo;
 	}

@@ -1,7 +1,7 @@
 import annotation.Alpha;
 import annotation.Threshold;
 import evaluationMetric.PopSerendipityTopNMetric;
-import funkSVD.lu.LuFunkSVDItemScorerBaysian;
+import funkSVD.lu.LuFunkSVDItemScorer;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import mf.baseline.SVDItemScorer;
@@ -42,6 +42,7 @@ import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import org.hamcrest.Matchers;
 import pop.PopItemScorer;
 import random.RandomItemScorer;
+import util.MyPopularItemSelector;
 
 import java.io.File;
 
@@ -107,7 +108,7 @@ public class ExperimentRunner {
 		evaluator.addAlgorithm("ZhengFunkSVD", getZhengFunkSVD());
 
 		LenskitConfiguration LuFunkSVD = new LenskitConfiguration();
-		LuFunkSVD.bind(ItemScorer.class).to(LuFunkSVDItemScorerBaysian.class);
+		LuFunkSVD.bind(ItemScorer.class).to(LuFunkSVDItemScorer.class);
 		LuFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		LuFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		LuFunkSVD.set(FeatureCount.class).to(FEATURE_COUNT);

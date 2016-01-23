@@ -1,4 +1,4 @@
-package funkSVD.lu;/*
+package funkSVD;/*
  * LensKit, an open source recommender systems toolkit.
  * Copyright 2010-2014 LensKit Contributors.  See CONTRIBUTORS.md.
  * Work on LensKit has been funded by the National Science Foundation under
@@ -33,12 +33,12 @@ import java.util.Collection;
 
 /**
  * Rating estimates used while training the predictor.  An estimator can be constructed
- * using {@link LuFunkSVDUpdateRule#makeEstimator(org.grouplens.lenskit.data.snapshot.PreferenceSnapshot)}.
+ * using {@link funkSVD.zheng.ZhengFunkSVDUpdateRule#makeEstimator(org.grouplens.lenskit.data.snapshot.PreferenceSnapshot)}.
  *
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  * @since 1.1
  */
-public final class LuTrainingEstimator {
+public final class MyTrainingEstimator {
 	private final Collection<IndexedPreference> ratings;
 	private final double[] estimates;
 	private final PreferenceDomain domain;
@@ -50,7 +50,7 @@ public final class LuTrainingEstimator {
 	 * @param baseline The baseline predictor.
 	 * @param dom      The preference domain (for clamping).
 	 */
-	LuTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
+	public MyTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {
 		ratings = snap.getRatings();
 		domain = dom;
 		estimates = new double[ratings.size()];
@@ -71,6 +71,7 @@ public final class LuTrainingEstimator {
 
 	/**
 	 * Get the estimate for a preference.
+	 *
 	 * @param pref The preference.
 	 * @return The estimate.
 	 */
@@ -80,6 +81,7 @@ public final class LuTrainingEstimator {
 
 	/**
 	 * Update the current estimates with trained values for a new feature.
+	 *
 	 * @param ufvs The user feature values.
 	 * @param ifvs The item feature values.
 	 */

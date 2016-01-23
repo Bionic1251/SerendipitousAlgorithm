@@ -34,7 +34,7 @@ import javax.inject.Inject;
 import java.io.Serializable;
 
 /**
- * Configuration for computing funkSVD updates.
+ * Configuration for computing getFunkSVD updates.
  *
  * @since 1.0
  */
@@ -50,7 +50,7 @@ public final class ZhengFunkSVDUpdateRule implements Serializable {
 	private final PreferenceDomain domain;
 
 	/**
-	 * Construct a new funkSVD configuration.
+	 * Construct a new getFunkSVD configuration.
 	 *
 	 * @param lrate The learning rate.
 	 * @param reg   The regularization term.

@@ -40,7 +40,7 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		AdaModel model = createModel();
 		//countError(model);
 		//for (int i = 0; i < 2; i++) {
-			learnParameters(model);
+			learnParameters(model); //it converges quickly
 			//countError(model);
 		//}
 		return model;

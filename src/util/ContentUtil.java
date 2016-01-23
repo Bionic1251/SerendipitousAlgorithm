@@ -1,4 +1,4 @@
-package evaluationMetric;
+package util;
 
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;

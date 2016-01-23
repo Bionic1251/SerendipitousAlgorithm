@@ -1,9 +1,9 @@
 import adamopoulos.AdaItemScorer;
 import annotation.RatingPredictor;
-import evaluationMetric.ContentUtil;
+import util.AlgorithmUtil;
+import util.ContentUtil;
 import evaluationMetric.PopSerendipityTopNMetric;
 import evaluationMetric.SerendipityTopNMetric;
-import funkSVD.lu.LuFunkSVDItemScorerBaysian;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import mf.baseline.SVDItemScorer;
@@ -46,6 +46,7 @@ import org.hamcrest.Matchers;
 import pop.PopItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
 import random.RandomItemScorer;
+import util.MyPopularItemSelector;
 
 import java.io.File;
 import java.util.*;
@@ -83,6 +84,8 @@ public class AdvancedEvaluatorRunner {
 	private static DelimitedColumnEventFormat eventFormat;
 	private static Map<Long, SparseVector> itemContentMap;
 
+	private static final int FEATURE_COUNT = 3;
+
 	private static void setEvaluator(SimpleEvaluator evaluator) {
 		int holdout = MY_HOLDOUT_NUMBER;
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
@@ -117,9 +120,11 @@ public class AdvancedEvaluatorRunner {
 
 		itemContentMap = ContentUtil.getItemContentMap(contentPath);
 
-		LenskitConfiguration POP = new LenskitConfiguration();
-		POP.bind(ItemScorer.class).to(PopItemScorer.class);
-		evaluator.addAlgorithm("POP", POP);
+		evaluator.addAlgorithm("POP", AlgorithmUtil.getPop());
+		evaluator.addAlgorithm("LuFunkSVDBaysian", AlgorithmUtil.getLuFunkSVDBaysian(FEATURE_COUNT));
+		evaluator.addAlgorithm("LuFunkSVDHinge", AlgorithmUtil.getLuFunkSVDHinge(FEATURE_COUNT));
+		evaluator.addAlgorithm("LuSVDBaysian", AlgorithmUtil.getLuSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("FunkSVD", AlgorithmUtil.getFunkSVD(FEATURE_COUNT));
 
 		LenskitConfiguration rnd = new LenskitConfiguration();
 		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
@@ -130,7 +135,7 @@ public class AdvancedEvaluatorRunner {
 		adaSVD.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
 		adaSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		adaSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		adaSVD.set(FeatureCount.class).to(5);
+		adaSVD.set(FeatureCount.class).to(2);
 		adaSVD.set(IterationCount.class).to(3000);
 		adaSVD.set(Threshold.class).to(THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
@@ -156,36 +161,6 @@ public class AdvancedEvaluatorRunner {
 		ZhengFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		ZhengFunkSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		//evaluator.addAlgorithm("ZhengFunkSVD", ZhengFunkSVD);
-
-		LenskitConfiguration LuFunkSVD = new LenskitConfiguration();
-		LuFunkSVD.bind(ItemScorer.class).to(LuFunkSVDItemScorerBaysian.class);
-		LuFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		LuFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		LuFunkSVD.set(FeatureCount.class).to(5);
-		LuFunkSVD.set(LearningRate.class).to(0.00001);
-		LuFunkSVD.set(IterationCount.class).to(20);
-		LuFunkSVD.set(Threshold.class).to(THRESHOLD);
-		LuFunkSVD.set(Alpha.class).to(0.5);
-		//evaluator.addAlgorithm("LuFunkSVD", LuFunkSVD);
-
-		LenskitConfiguration FunkSVD = new LenskitConfiguration();
-		FunkSVD.bind(ItemScorer.class).to(FunkSVDItemScorer.class);
-		FunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		FunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		FunkSVD.set(FeatureCount.class).to(5);
-		FunkSVD.set(IterationCount.class).to(3000);
-		//evaluator.addAlgorithm("funkSVD", FunkSVD);
-
-		LenskitConfiguration LuSVD = new LenskitConfiguration();
-		LuSVD.bind(ItemScorer.class).to(LuSVDItemScorer.class);
-		LuSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		LuSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		LuSVD.set(FeatureCount.class).to(5);
-		LuSVD.set(LearningRate.class).to(0.001);
-		LuSVD.set(IterationCount.class).to(10);
-		LuSVD.set(Threshold.class).to(THRESHOLD);
-		LuSVD.set(Alpha.class).to(0.5);
-		//evaluator.addAlgorithm("LuSVD", LuSVD);
 
 		LenskitConfiguration SVDBaseline = new LenskitConfiguration();
 		SVDBaseline.bind(ItemScorer.class).to(SVDItemScorer.class);
@@ -235,9 +210,9 @@ public class AdvancedEvaluatorRunner {
 
 		addMetricsWithParameters(evaluator, at_n, ItemSelectors.allItems(), "all");
 
-		addMetricsWithParameters(evaluator, at_n, ItemSelectors.testItems(), "test");
+		addMetricsWithParameters(evaluator, 5, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, 5, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(POPULAR_ITEMS_NUMBER)), POPULAR_ITEMS_NUMBER + "random");
+		addMetricsWithParameters(evaluator, at_n, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(POPULAR_ITEMS_NUMBER)), POPULAR_ITEMS_NUMBER + "random");
 	}
 
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, int maxNumber, ItemSelector candidates, String prefix) {
