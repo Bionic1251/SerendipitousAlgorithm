@@ -1,5 +1,6 @@
 import adamopoulos.AdaItemScorer;
 import annotation.RatingPredictor;
+import evaluationMetric.ContentUtil;
 import evaluationMetric.PopSerendipityTopNMetric;
 import evaluationMetric.SerendipityTopNMetric;
 import funkSVD.lu.LuFunkSVDItemScorerBaysian;
@@ -38,7 +39,6 @@ import org.grouplens.lenskit.knn.item.ItemItemScorer;
 import org.grouplens.lenskit.mf.funksvd.*;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
-import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
 import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
@@ -47,7 +47,6 @@ import pop.PopItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
 import random.RandomItemScorer;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.util.*;
 
@@ -56,10 +55,11 @@ public class AdvancedEvaluatorRunner {
 	private static final int MY_HOLDOUT_NUMBER = 3;
 	private static final int HOLDOUT_NUMBER = 10;
 	private static final int MY_AT_N = 5;
-	private static final int AT_N = 10;
-	private static final int MY_SERENDIPITOUS_ITEMS_NUMBER = 2;
-	private static final int SERENDIPITOUS_ITEMS_NUMBER = 40;
+	private static final int AT_N = 20;
+	private static final int MY_EXPECTED_ITEMS_NUMBER = 2;
+	private static final int EXPECTED_ITEMS_NUMBER = 40;
 	private static final double THRESHOLD = 3.0;
+	private static final int POPULAR_ITEMS_NUMBER = 50;
 	private static final String MY_DATASET = "D:\\bigdata\\movielens\\fake\\all_ratings_extended";
 	private static final String SMALL_DATASET = "D:\\bigdata\\movielens\\ml-100k\\u.data";
 	private static final String SMALL_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\u.item";
@@ -81,6 +81,7 @@ public class AdvancedEvaluatorRunner {
 	private static String path;
 	private static String contentPath;
 	private static DelimitedColumnEventFormat eventFormat;
+	private static Map<Long, SparseVector> itemContentMap;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
 		int holdout = MY_HOLDOUT_NUMBER;
@@ -114,7 +115,7 @@ public class AdvancedEvaluatorRunner {
 		SimpleEvaluator evaluator = new SimpleEvaluator();
 		setEvaluator(evaluator);
 
-		prepare();
+		itemContentMap = ContentUtil.getItemContentMap(contentPath);
 
 		LenskitConfiguration POP = new LenskitConfiguration();
 		POP.bind(ItemScorer.class).to(PopItemScorer.class);
@@ -210,7 +211,7 @@ public class AdvancedEvaluatorRunner {
 		itemItem.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		//evaluator.addAlgorithm("itemItem", itemItem);
 
-		addMetrics(evaluator);
+		addEvaluationMetrics(evaluator);
 
 		try {
 			evaluator.call();
@@ -219,13 +220,45 @@ public class AdvancedEvaluatorRunner {
 		}
 	}
 
-	private static void addMetrics(SimpleEvaluator evaluator) {
+	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
 		int at_n, serendipitousNumber;
 		if (STATE.equals(MY)) {
-			serendipitousNumber = MY_SERENDIPITOUS_ITEMS_NUMBER;
+			serendipitousNumber = MY_EXPECTED_ITEMS_NUMBER;
 			at_n = MY_AT_N;
 		} else {
-			serendipitousNumber = SERENDIPITOUS_ITEMS_NUMBER;
+			serendipitousNumber = EXPECTED_ITEMS_NUMBER;
+			at_n = AT_N;
+		}
+
+		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems()), ItemSelectors.testItems());
+		addMetricsWithParameters(evaluator, at_n, popCandidates, POPULAR_ITEMS_NUMBER + "candidates");
+
+		addMetricsWithParameters(evaluator, at_n, ItemSelectors.allItems(), "all");
+
+		addMetricsWithParameters(evaluator, at_n, ItemSelectors.testItems(), "test");
+
+		addMetricsWithParameters(evaluator, 5, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(POPULAR_ITEMS_NUMBER)), POPULAR_ITEMS_NUMBER + "random");
+	}
+
+	private static void addMetricsWithParameters(SimpleEvaluator evaluator, int maxNumber, ItemSelector candidates, String prefix) {
+		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(THRESHOLD));
+		ItemSelector exclude = ItemSelectors.trainingItems();
+		for (int i = 5; i <= maxNumber; i += 5) {
+			String suffix = prefix + "." + i;
+			evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, i, candidates, exclude, threshold));
+			evaluator.addMetric(new NDCGTopNMetric("", suffix, i, candidates, exclude));
+			evaluator.addMetric(new PopSerendipityTopNMetric(suffix, i, EXPECTED_ITEMS_NUMBER, candidates, exclude, threshold));
+			evaluator.addMetric(new SerendipityTopNMetric("content." + suffix, i, EXPECTED_ITEMS_NUMBER, candidates, exclude, threshold, itemContentMap, 300));
+		}
+	}
+
+	/*private static void addMetrics(SimpleEvaluator evaluator) {
+		int at_n, serendipitousNumber;
+		if (STATE.equals(MY)) {
+			serendipitousNumber = MY_EXPECTED_ITEMS_NUMBER;
+			at_n = MY_AT_N;
+		} else {
+			serendipitousNumber = EXPECTED_ITEMS_NUMBER;
 			at_n = AT_N;
 		}
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(THRESHOLD));
@@ -239,19 +272,19 @@ public class AdvancedEvaluatorRunner {
 		evaluator.addMetric(new PopSerendipityTopNMetric(suffix, at_n, serendipitousNumber, candidates, exclude, threshold));
 		evaluator.addMetric(new SerendipityTopNMetric("cor" + suffix, at_n, serendipitousNumber, candidates, exclude, threshold, itemContentMap, 500));
 
-		/*for (int i = at_n; i <= 20; i += 5) {
+		*//*for (int i = at_n; i <= 20; i += 5) {
 			String suffix = i + "";
 			//evaluator.addMetric(new RMSEPredictMetric());
 			evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, i, candidates, exclude, threshold));
 			evaluator.addMetric(new NDCGTopNMetric("", suffix, i, candidates, exclude));
 			evaluator.addMetric(new SerendipityTopNMetric(suffix, i, serendipitousNumber, candidates, exclude, threshold));
-		}*/
-	}
+		}*//*
+	}*/
 
 	private static LongSet getPopItems() {
 		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(path), eventFormat), new PreferenceDomain(MIN, MAX));
 		ItemEventDAO idao = dataSource.getItemEventDAO();
-		ScoredItemAccumulator accum = new TopNScoredItemAccumulator(1000);
+		ScoredItemAccumulator accum = new TopNScoredItemAccumulator(POPULAR_ITEMS_NUMBER);
 		Cursor<ItemEventCollection<Event>> items = idao.streamEventsByItem();
 		try {
 			for (ItemEventCollection<Event> item : items) {
@@ -261,68 +294,5 @@ public class AdvancedEvaluatorRunner {
 			items.close();
 		}
 		return accum.finishSet();
-	}
-
-	private static int[] termDocFreq;
-	private static Map<Long, SparseVector> itemContentMap;
-
-	private static void prepare() {
-		itemContentMap = new HashMap<Long, SparseVector>();
-		Map<Long, BitSet> vecMap = getVectors();
-		for (Map.Entry<Long, BitSet> entry : vecMap.entrySet()) {
-			SparseVector vector = vecByBitSet(entry.getValue(), vecMap.size());
-			itemContentMap.put(entry.getKey(), vector);
-		}
-	}
-
-	private static SparseVector vecByBitSet(BitSet set, int docNum) {
-		Set<Long> keys = new HashSet<Long>();
-		for (int i = 0; i < termDocFreq.length; i++) {
-			keys.add((long) i);
-		}
-		MutableSparseVector vector = MutableSparseVector.create(keys);
-		for (int i = 0; i < termDocFreq.length; i++) {
-			if (set.get(i)) {
-				double tfidf = getTFIDF(docNum, i);
-				vector.set((long) i, tfidf);
-			}
-		}
-		return vector;
-	}
-
-	private static double getTFIDF(int docNum, int termNumber) {
-		double tf = 1.0 / termDocFreq.length;
-		double idf = Math.log((double) docNum / termDocFreq[termNumber]);
-		return tf * idf;
-	}
-
-	private static Map<Long, BitSet> getVectors() {
-		Map<Long, BitSet> vecMap = new HashMap<Long, BitSet>();
-		int boolLen = 23, boolStart = 5;
-		termDocFreq = new int[boolLen - boolStart + 1];
-		try {
-			BufferedReader reader = new BufferedReader(new java.io.FileReader(contentPath));
-			try {
-				String line = reader.readLine();
-				while (line != null) {
-					String[] vector = line.split("\\|");
-					Long id = Long.valueOf(vector[0]);
-					BitSet bitSet = new BitSet(boolLen - boolStart + 1);
-					for (int i = boolStart; i <= boolLen; i++) {
-						if (Integer.valueOf(vector[i]) != 0) {
-							bitSet.set(i - boolStart);
-							termDocFreq[i - boolStart]++;
-						}
-					}
-					vecMap.put(id, bitSet);
-					line = reader.readLine();
-				}
-			} finally {
-				reader.close();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return vecMap;
 	}
 }
