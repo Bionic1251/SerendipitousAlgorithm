@@ -39,6 +39,7 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	private final PreferenceDomain domain;
 	private final double alpha;
 	private final StoppingCondition stoppingCondition;
+	private UserPreferences userPreferences;
 
 	protected final LuFunkSVDUpdateRule rule;
 
@@ -62,6 +63,8 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	public LuFunkSVDModel get() {
 		System.out.println(LuFunkSVDModelBuilder.class);
 		popMap = Util.getPopMap(snapshot);
+
+		userPreferences = new UserPreferences(snapshot, threshold);
 
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);
@@ -109,10 +112,9 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 		double trail = initialValue * initialValue * (featureCount - feature - 1);
 		TrainingLoopController controller = stoppingCondition.newLoop();
 		calculateStatistics(estimates, userFeatureVector, itemFeatureVector, trail);
-		boolean searching = true;
-		while (controller.keepTraining(0.0) && searching) {
+		while (controller.keepTraining(0.0)) {
 			doFeatureIteration(estimates, userFeatureVector, itemFeatureVector, trail);
-			searching = calculateStatistics(estimates, userFeatureVector, itemFeatureVector, trail);
+			calculateStatistics(estimates, userFeatureVector, itemFeatureVector, trail);
 		}
 	}
 
@@ -121,15 +123,8 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 									  double trail) {
 		LongCollection userIds = snapshot.getUserIds();
 		for (long usedId : userIds) {
-			Collection<IndexedPreference> userRatings = snapshot.getUserRatings(usedId);
-			for (IndexedPreference liked : userRatings) {
-				if (liked.getValue() <= threshold) {
-					continue;
-				}
-				for (IndexedPreference disliked : userRatings) {
-					if (disliked.getValue() > threshold) {
-						continue;
-					}
+			for (IndexedPreference liked : userPreferences.getLikedItems(usedId)) {
+				for (IndexedPreference disliked : userPreferences.getDislikedItems(usedId)) {
 					trainPair(userFeatureVector, itemFeatureVector, liked, disliked, estimates, trail);
 				}
 			}
@@ -149,39 +144,26 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 
 		double pop = Math.pow(popMap.get(disliked.getItemIndex()) + 1, alpha);
 		double diff = likedPred - dislikedPred;
-		/*if (diff > 0) {
-			return;
-		}*/
 
 		itemFeatureVector.addAt(liked.getItemIndex(), rule.getNextStep(uv, pop, diff, likedIV));
 		itemFeatureVector.addAt(disliked.getItemIndex(), rule.getNextStep(-uv, pop, diff, dislikedIV));
 		//userFeatureVector.addAt(liked.getUserIndex(), rule.getNextStep(likedIV, pop, diff, uv));
 	}
 
-	protected boolean calculateStatistics(MyTrainingEstimator estimates,
+	protected void calculateStatistics(MyTrainingEstimator estimates,
 										  Vector userFeatureVector, Vector itemFeatureVector,
 										  double trail) {
-		double prevFunc = func;
 		count = 0;
 		func = 0;
 		LongCollection userIds = snapshot.getUserIds();
 		for (long usedId : userIds) {
-			Collection<IndexedPreference> userRatings = snapshot.getUserRatings(usedId);
-			for (IndexedPreference liked : userRatings) {
-				if (liked.getValue() <= threshold) {
-					continue;
-				}
-				for (IndexedPreference disliked : userRatings) {
-					if (disliked.getValue() > threshold) {
-						continue;
-					}
+			for (IndexedPreference liked : userPreferences.getLikedItems(usedId)) {
+				for (IndexedPreference disliked : userPreferences.getDislikedItems(usedId)) {
 					calculateStatisticsForPair(userFeatureVector, itemFeatureVector, liked, disliked, estimates, trail);
 				}
 			}
 		}
-
 		System.out.println("Pairs count: " + count + "; Function value: " + func);
-		return prevFunc <= func;
 	}
 
 	private void calculateStatisticsForPair(Vector userFeatureVector, Vector itemFeatureVector, IndexedPreference liked,

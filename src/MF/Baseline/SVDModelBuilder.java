@@ -24,27 +24,12 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.*;
 
-/**
- * baseline recommender builder using gradient descent (Funk baseline).
- * <p/>
- * <p>
- * This recommender builder constructs an baseline-based recommender using gradient
- * descent, as pioneered by Simon Funk.  It also incorporates the regularizations
- * Funk did. These are documented in
- * <a href="http://sifter.org/~simon/journal/20061211.html">Netflix Update: Try
- * This at Home</a>. This implementation is based in part on
- * <a href="http://www.timelydevelopment.com/demos/NetflixPrize.aspx">Timely
- * Development's sample code</a>.</p>
- *
- * @author <a href="http://www.grouplens.org">GroupLens Research</a>
- */
 public class SVDModelBuilder implements Provider<SVDModel> {
 	private static Logger logger = LoggerFactory.getLogger(SVDModelBuilder.class);
 
 	protected final int featureCount;
 	protected final double learningRate;
 	protected final double regularization;
-	private final PreferenceDomain domain;
 	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
@@ -52,13 +37,11 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 	@Inject
 	public SVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 						   @FeatureCount int featureCount,
-						   @InitialFeatureValue double initVal,
-						   @Nullable PreferenceDomain dom, @LearningRate double lrate,
+						   @InitialFeatureValue double initVal, @LearningRate double lrate,
 						   @RegularizationTerm double reg, StoppingCondition stop) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
-		domain = dom;
 		learningRate = lrate;
 		regularization = reg;
 		stoppingCondition = stop;
@@ -67,6 +50,7 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 
 	@Override
 	public SVDModel get() {
+		System.out.println(SVDModelBuilder.class);
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);
 
@@ -86,20 +70,19 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 			ivec.fill(initialValue);
 
 			userFeatures.setColumn(f, uvec);
-			assert Math.abs(userFeatures.getColumnView(f).elementSum() - uvec.elementSum()) < 1.0e-4 : "user column sum matches";
 			itemFeatures.setColumn(f, ivec);
-			assert Math.abs(itemFeatures.getColumnView(f).elementSum() - ivec.elementSum()) < 1.0e-4 : "item column sum matches";
 
 			FeatureInfo.Builder fib = new FeatureInfo.Builder(f);
 			featureInfo.add(fib.build());
 		}
 
 		TrainingLoopController controller = stoppingCondition.newLoop();
+		calculateStatistics(userFeatures, itemFeatures);
 		while (controller.keepTraining(0.0)) {
 			trainFeatures(userFeatures, itemFeatures);
+			calculateStatistics(userFeatures, itemFeatures);
 		}
 
-		// Wrap the user/item matrices because we won't use or modify them again
 		return new SVDModel(ImmutableMatrix.wrap(userFeatures),
 				ImmutableMatrix.wrap(itemFeatures),
 				snapshot.userIndex(), snapshot.itemIndex(),
@@ -107,33 +90,35 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 	}
 
 	private void trainFeatures(Matrix userFeatures, Matrix itemFeatures) {
+		for (IndexedPreference rating : snapshot.getRatings()) {
+			AVector item = itemFeatures.getRow(rating.getItemIndex());
+			AVector user = userFeatures.getRow(rating.getUserIndex());
+			double prediction = item.dotProduct(user);
+			double error = (rating.getValue() - prediction);
+			for (int i = 0; i < featureCount; i++) {
+				double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
+				if (Double.isNaN(val) || Double.isInfinite(val)) {
+					System.out.println(val);
+				}
+				item.set(i, val);
+
+				val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
+				if (Double.isNaN(val) || Double.isInfinite(val)) {
+					System.out.println(val);
+				}
+				user.set(i, val);
+			}
+		}
+	}
+
+	private void calculateStatistics(Matrix userFeatures, Matrix itemFeatures) {
 		double sum = 0;
 		for (IndexedPreference rating : snapshot.getRatings()) {
 			AVector item = itemFeatures.getRow(rating.getItemIndex());
 			AVector user = userFeatures.getRow(rating.getUserIndex());
 			double prediction = item.dotProduct(user);
 			double error = (rating.getValue() - prediction);
-			if (Double.isNaN(error) || Double.isInfinite(error)) {
-				System.out.printf("Yo");
-			}
 			sum += Math.abs(error);
-			for (int i = 0; i < featureCount; i++) {
-				double val = item.get(i) + learningRate * (2 * error * user.get(i) - regularization * item.get(i));
-				if (item.get(i) > 100 || user.get(i) > 100) {
-					System.out.println("item " + item.get(i));
-					System.out.println("user " + user.get(i));
-				}
-				if (Double.isNaN(val) || Double.isInfinite(val)) {
-					System.out.println("NaN");
-				}
-				item.set(i, val);
-
-				val = user.get(i) + learningRate * (2 * error * item.get(i) - regularization * user.get(i));
-				if (Double.isNaN(val) || Double.isInfinite(val)) {
-					System.out.println("NaN");
-				}
-				user.set(i, val);
-			}
 		}
 		System.out.println("MAE " + sum / snapshot.getRatings().size());
 	}

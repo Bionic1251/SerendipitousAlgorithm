@@ -41,21 +41,25 @@ public class ContentUtil {
 	}
 
 	private static Map<Long, BitSet> getVectors(String path) {
+		int len = 0;
 		Map<Long, BitSet> vecMap = new HashMap<Long, BitSet>();
-		int boolLen = 23, boolStart = 5;
-		termDocFreq = new int[boolLen - boolStart + 1];
+		termDocFreq = null;
 		try {
 			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
 			try {
 				String line = reader.readLine();
 				while (line != null) {
-					String[] vector = line.split("\\|");
+					String[] vector = line.split(",");
+					if (termDocFreq == null) {
+						len = vector.length - 1;
+						termDocFreq = new int[len];
+					}
 					Long id = Long.valueOf(vector[0]);
-					BitSet bitSet = new BitSet(boolLen - boolStart + 1);
-					for (int i = boolStart; i <= boolLen; i++) {
+					BitSet bitSet = new BitSet(len);
+					for (int i = 1; i < vector.length - 1; i++) {
 						if (Integer.valueOf(vector[i]) != 0) {
-							bitSet.set(i - boolStart);
-							termDocFreq[i - boolStart]++;
+							bitSet.set(i);
+							termDocFreq[i]++;
 						}
 					}
 					vecMap.put(id, bitSet);

@@ -63,9 +63,9 @@ public class AdvancedEvaluatorRunner {
 	private static final int POPULAR_ITEMS_NUMBER = 50;
 	private static final String MY_DATASET = "D:\\bigdata\\movielens\\fake\\all_ratings_extended";
 	private static final String SMALL_DATASET = "D:\\bigdata\\movielens\\ml-100k\\u.data";
-	private static final String SMALL_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\u.item";
+	private static final String SMALL_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\small_content.dat";
 	private static final String BIG_DATASET = "D:\\bigdata\\movielens\\hetrec\\user_ratedmovies-timestamps.dat";
-	private static final String BIG_DATASET_CONTENT = "D:\\bigdata\\movielens\\ml-100k\\u.item";
+	private static final String BIG_DATASET_CONTENT = "D:\\bigdata\\movielens\\hetrec\\big_content.dat";
 	private static final String TRAIN_TEST_FOLDER_NAME = "task";
 	private static final String OUTPUT_PATH = "./results/out.csv";
 	private static final String OUTPUT_USER_PATH = "./results/user.csv";
@@ -121,10 +121,12 @@ public class AdvancedEvaluatorRunner {
 		itemContentMap = ContentUtil.getItemContentMap(contentPath);
 
 		evaluator.addAlgorithm("POP", AlgorithmUtil.getPop());
-		evaluator.addAlgorithm("LuFunkSVDBaysian", AlgorithmUtil.getLuFunkSVDBaysian(FEATURE_COUNT));
-		evaluator.addAlgorithm("LuFunkSVDHinge", AlgorithmUtil.getLuFunkSVDHinge(FEATURE_COUNT));
-		evaluator.addAlgorithm("LuSVDBaysian", AlgorithmUtil.getLuSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("LuFunkSVDBaysian", AlgorithmUtil.getLuFunkSVDBaysian(FEATURE_COUNT));
+		//evaluator.addAlgorithm("LuFunkSVDHinge", AlgorithmUtil.getLuFunkSVDHinge(FEATURE_COUNT));
 		//evaluator.addAlgorithm("FunkSVD", AlgorithmUtil.getFunkSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("LuSVDHinge", AlgorithmUtil.getLuSVDHinge(FEATURE_COUNT));
+		//evaluator.addAlgorithm("LuSVDBaysian", AlgorithmUtil.getLuSVDBaysian(FEATURE_COUNT));
+		//evaluator.addAlgorithm("SVD", AlgorithmUtil.getSVD(FEATURE_COUNT));
 
 		LenskitConfiguration rnd = new LenskitConfiguration();
 		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
@@ -206,13 +208,13 @@ public class AdvancedEvaluatorRunner {
 		}
 
 		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems()), ItemSelectors.testItems());
-		addMetricsWithParameters(evaluator, at_n, popCandidates, POPULAR_ITEMS_NUMBER + "candidates");
+		addMetricsWithParameters(evaluator, at_n, popCandidates, POPULAR_ITEMS_NUMBER + "pop");
 
 		addMetricsWithParameters(evaluator, at_n, ItemSelectors.allItems(), "all");
 
 		addMetricsWithParameters(evaluator, 5, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, at_n, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(POPULAR_ITEMS_NUMBER)), POPULAR_ITEMS_NUMBER + "random");
+		addMetricsWithParameters(evaluator, at_n, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(POPULAR_ITEMS_NUMBER)), POPULAR_ITEMS_NUMBER + "rand");
 	}
 
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, int maxNumber, ItemSelector candidates, String prefix) {

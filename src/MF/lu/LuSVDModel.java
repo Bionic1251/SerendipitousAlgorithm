@@ -12,10 +12,9 @@ import org.grouplens.lenskit.mf.svd.MFModel;
 
 import java.util.List;
 
-@DefaultProvider(LuSVDModelBuilderBaysian.class)
+@DefaultProvider(LuSVDModelBuilder.class)
 @Shareable
 public final class LuSVDModel extends MFModel {
-	private static final long serialVersionUID = 3L;
 
 	private final List<FeatureInfo> featureInfo;
 	private final AVector averageUser;
