@@ -120,13 +120,15 @@ public class AdvancedEvaluatorRunner {
 
 		itemContentMap = ContentUtil.getItemContentMap(contentPath);
 
-		evaluator.addAlgorithm("POP", AlgorithmUtil.getPop());
+		//evaluator.addAlgorithm("POP", AlgorithmUtil.getPop());
 		//evaluator.addAlgorithm("LuFunkSVDBaysian", AlgorithmUtil.getLuFunkSVDBaysian(FEATURE_COUNT));
 		//evaluator.addAlgorithm("LuFunkSVDHinge", AlgorithmUtil.getLuFunkSVDHinge(FEATURE_COUNT));
 		//evaluator.addAlgorithm("FunkSVD", AlgorithmUtil.getFunkSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("LuSVDHinge", AlgorithmUtil.getLuSVDHinge(FEATURE_COUNT));
 		//evaluator.addAlgorithm("LuSVDBaysian", AlgorithmUtil.getLuSVDBaysian(FEATURE_COUNT));
 		//evaluator.addAlgorithm("SVD", AlgorithmUtil.getSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("ZhengSVD", AlgorithmUtil.getZhengSVD(FEATURE_COUNT));
+		evaluator.addAlgorithm("ZhengFunkSVD", AlgorithmUtil.getZhengFunkSVD(FEATURE_COUNT));
 
 		LenskitConfiguration rnd = new LenskitConfiguration();
 		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
@@ -153,34 +155,6 @@ public class AdvancedEvaluatorRunner {
 		adaFunkSVD.set(Threshold.class).to(THRESHOLD);
 		adaFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		//evaluator.addAlgorithm("AdaFunkSVD", adaFunkSVD);
-
-		LenskitConfiguration ZhengFunkSVD = new LenskitConfiguration();
-		ZhengFunkSVD.bind(ItemScorer.class).to(ZhengFunkSVDItemScorer.class);
-		ZhengFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		ZhengFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		ZhengFunkSVD.set(FeatureCount.class).to(5);
-		ZhengFunkSVD.set(IterationCount.class).to(3);
-		ZhengFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
-		ZhengFunkSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
-		//evaluator.addAlgorithm("ZhengFunkSVD", ZhengFunkSVD);
-
-		LenskitConfiguration SVDBaseline = new LenskitConfiguration();
-		SVDBaseline.bind(ItemScorer.class).to(SVDItemScorer.class);
-		SVDBaseline.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		SVDBaseline.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		SVDBaseline.set(FeatureCount.class).to(5);
-		SVDBaseline.set(IterationCount.class).to(3000);
-		//evaluator.addAlgorithm("SVDBaseline", SVDBaseline);
-
-		LenskitConfiguration ZhengSVD = new LenskitConfiguration();
-		ZhengSVD.bind(ItemScorer.class).to(ZhengSVDItemScorer.class);
-		ZhengSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		ZhengSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		ZhengSVD.set(FeatureCount.class).to(5);
-		ZhengSVD.set(IterationCount.class).to(500);
-		ZhengSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
-		ZhengSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
-		//evaluator.addAlgorithm("ZhengSVD", ZhengSVD);
 
 		LenskitConfiguration itemItem = new LenskitConfiguration();
 		itemItem.bind(ItemScorer.class).to(ItemItemScorer.class);
