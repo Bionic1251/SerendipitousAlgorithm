@@ -56,7 +56,7 @@ public class AdvancedEvaluatorRunner {
 	private static final int MY_HOLDOUT_NUMBER = 3;
 	private static final int HOLDOUT_NUMBER = 10;
 	private static final int MY_AT_N = 5;
-	private static final int AT_N = 20;
+	private static final int AT_N = 30;
 	private static final int MY_EXPECTED_ITEMS_NUMBER = 2;
 	private static final int EXPECTED_ITEMS_NUMBER = 40;
 	private static final double THRESHOLD = 3.0;
@@ -128,39 +128,11 @@ public class AdvancedEvaluatorRunner {
 		//evaluator.addAlgorithm("LuSVDBaysian", AlgorithmUtil.getLuSVDBaysian(FEATURE_COUNT));
 		//evaluator.addAlgorithm("SVD", AlgorithmUtil.getSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("ZhengSVD", AlgorithmUtil.getZhengSVD(FEATURE_COUNT));
-		evaluator.addAlgorithm("ZhengFunkSVD", AlgorithmUtil.getZhengFunkSVD(FEATURE_COUNT));
-
-		LenskitConfiguration rnd = new LenskitConfiguration();
-		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
-		//evaluator.addAlgorithm("Random", rnd);
-
-		LenskitConfiguration adaSVD = new LenskitConfiguration();
-		adaSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
-		adaSVD.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
-		adaSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		adaSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		adaSVD.set(FeatureCount.class).to(2);
-		adaSVD.set(IterationCount.class).to(3000);
-		adaSVD.set(Threshold.class).to(THRESHOLD);
-		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
-		//evaluator.addAlgorithm("AdaSVD", adaSVD);
-
-		LenskitConfiguration adaFunkSVD = new LenskitConfiguration();
-		adaFunkSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
-		adaFunkSVD.bind(RatingPredictor.class, ItemScorer.class).to(FunkSVDItemScorer.class);
-		adaFunkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		adaFunkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		adaFunkSVD.set(FeatureCount.class).to(5);
-		adaFunkSVD.set(IterationCount.class).to(3000);
-		adaFunkSVD.set(Threshold.class).to(THRESHOLD);
-		adaFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
-		//evaluator.addAlgorithm("AdaFunkSVD", adaFunkSVD);
-
-		LenskitConfiguration itemItem = new LenskitConfiguration();
-		itemItem.bind(ItemScorer.class).to(ItemItemScorer.class);
-		itemItem.bind(BaselineScorer.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		itemItem.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
-		//evaluator.addAlgorithm("itemItem", itemItem);
+		//evaluator.addAlgorithm("ZhengFunkSVD", AlgorithmUtil.getZhengFunkSVD(FEATURE_COUNT));
+		evaluator.addAlgorithm("AdaSVD", AlgorithmUtil.getAdaSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("AdaFunkSVD", AlgorithmUtil.getAdaFunkSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("ItemItem", AlgorithmUtil.getItemItem());
+		//evaluator.addAlgorithm("Random", AlgorithmUtil.getRandom());
 
 		addEvaluationMetrics(evaluator);
 
@@ -202,35 +174,6 @@ public class AdvancedEvaluatorRunner {
 			evaluator.addMetric(new SerendipityTopNMetric("content." + suffix, i, EXPECTED_ITEMS_NUMBER, candidates, exclude, threshold, itemContentMap, 300));
 		}
 	}
-
-	/*private static void addMetrics(SimpleEvaluator evaluator) {
-		int at_n, serendipitousNumber;
-		if (STATE.equals(MY)) {
-			serendipitousNumber = MY_EXPECTED_ITEMS_NUMBER;
-			at_n = MY_AT_N;
-		} else {
-			serendipitousNumber = EXPECTED_ITEMS_NUMBER;
-			at_n = AT_N;
-		}
-		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(THRESHOLD));
-		ItemSelector candidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems()), ItemSelectors.testItems());
-		ItemSelector exclude = ItemSelectors.trainingItems();
-
-		String suffix = at_n + "";
-		//evaluator.addMetric(new RMSEPredictMetric());
-		evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, at_n, candidates, exclude, threshold));
-		evaluator.addMetric(new NDCGTopNMetric("", suffix, at_n, candidates, exclude));
-		evaluator.addMetric(new PopSerendipityTopNMetric(suffix, at_n, serendipitousNumber, candidates, exclude, threshold));
-		evaluator.addMetric(new SerendipityTopNMetric("cor" + suffix, at_n, serendipitousNumber, candidates, exclude, threshold, itemContentMap, 500));
-
-		*//*for (int i = at_n; i <= 20; i += 5) {
-			String suffix = i + "";
-			//evaluator.addMetric(new RMSEPredictMetric());
-			evaluator.addMetric(new PrecisionRecallTopNMetric("", suffix, i, candidates, exclude, threshold));
-			evaluator.addMetric(new NDCGTopNMetric("", suffix, i, candidates, exclude));
-			evaluator.addMetric(new SerendipityTopNMetric(suffix, i, serendipitousNumber, candidates, exclude, threshold));
-		}*//*
-	}*/
 
 	private static LongSet getPopItems() {
 		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(path), eventFormat), new PreferenceDomain(MIN, MAX));

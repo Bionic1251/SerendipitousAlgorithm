@@ -75,8 +75,7 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 				serendipityCount++;
 			}
 		}
-		double number = serendipitousItems.size() > evaluationListSize ? evaluationListSize : serendipitousItems.size();
-		double value = (double) serendipityCount / number;
+		double value = (double) serendipityCount / evaluationListSize;
 		context.add(value);
 		return new PopSerendipityTopNMetric.Result(value, 1);
 	}

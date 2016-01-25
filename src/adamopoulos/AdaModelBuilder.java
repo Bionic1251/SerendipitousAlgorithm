@@ -27,7 +27,6 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 	@Inject
 	public AdaModelBuilder(@RatingPredictor ItemScorer baseline, ItemItemModel itemItemModel, PopModel popModel,
 						   @Transient @Nonnull PreferenceSnapshot snapshot, @Threshold double threshold) {
-		System.out.println("AdaModelBuilder");
 		this.baseline = baseline;
 		this.itemItemModel = itemItemModel;
 		this.snapshot = snapshot;
@@ -37,11 +36,12 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 
 	@Override
 	public AdaModel get() {
+		System.out.println(AdaModelBuilder.class);
 		AdaModel model = createModel();
 		//countError(model);
 		//for (int i = 0; i < 2; i++) {
-			learnParameters(model); //it converges quickly
-			//countError(model);
+		learnParameters(model); //it converges quickly
+		//countError(model);
 		//}
 		return model;
 	}
