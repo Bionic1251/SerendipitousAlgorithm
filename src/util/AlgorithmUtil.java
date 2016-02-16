@@ -1,13 +1,14 @@
 package util;
 
 import adamopoulos.AdaItemScorer;
-import alg.pop.AlgPopItemScorer;
+import lc.AlgPopItemScorer;
 import annotation.*;
 import funkSVD.lu.LuFunkSVDItemScorer;
 import funkSVD.lu.LuUpdateRule;
 import funkSVD.lu.LuUpdateRuleBaysian;
 import funkSVD.lu.LuUpdateRuleHinge;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
+import lc.advanced.LCItemScorer;
 import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
@@ -276,11 +277,29 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
+	private static LenskitConfiguration getLC() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(LCItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.set(FeatureCount.class).to(FEATURE_COUNT);
+		alg.set(LearningRate.class).to(LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(ITERATION_COUNT);
+
+		alg.set(UnpopWeight.class).to(0.12);
+		alg.set(DissimilarityWeight.class).to(0.12);
+		alg.set(RelevanceWeight.class).to(0.12);
+
+		return alg;
+	}
+
 	public static LenskitConfiguration getAlgAll() {
 		LenskitConfiguration alg = getAlg();
 		alg.set(UnpopWeight.class).to(1.0);
 		alg.set(DissimilarityWeight.class).to(1.0);
-		alg.set(RelevanceWeight.class).to(2.0);
+		alg.set(RelevanceWeight.class).to(1.0);
 		return alg;
 	}
 
@@ -355,6 +374,7 @@ public class AlgorithmUtil {
 		configurationMap.put("Random", AlgorithmUtil.getRandom());
 		configurationMap.put("AlgAll", AlgorithmUtil.getAlgAll());
 		configurationMap.put("AlgDissimUnpop", AlgorithmUtil.getAlgDissimUnpop());
+		configurationMap.put("LCDU", AlgorithmUtil.getLC());
 		configurationMap.put("AlgDissimRel", AlgorithmUtil.getAlgDissimRel());
 		configurationMap.put("AlgUnpopRel", AlgorithmUtil.getAlgUnpopRel());
 		configurationMap.put("AlgUnpop", AlgorithmUtil.getAlgUnpop());

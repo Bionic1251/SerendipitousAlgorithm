@@ -16,10 +16,15 @@ import java.util.Map;
 public class PopModel implements Serializable {
 	private Map<Long, PopModelBuilder.Container> itemMap;
 	private final boolean reverse;
+	private double max;
 
 	public PopModel(Map<Long, PopModelBuilder.Container> itemMap, boolean reverse) {
 		this.itemMap = itemMap;
 		this.reverse = reverse;
+		max = 0;
+		for (PopModelBuilder.Container container : itemMap.values()) {
+			max = Math.max(max, container.getRatingNumber());
+		}
 	}
 
 	public Integer getPop(Long itemId) {
@@ -27,6 +32,10 @@ public class PopModel implements Serializable {
 			return 0;
 		}
 		return itemMap.get(itemId).getRatingNumber();
+	}
+
+	public double getMax() {
+		return max;
 	}
 
 	public Map<Long, PopModelBuilder.Container> getItemMap() {

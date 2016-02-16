@@ -1,7 +1,6 @@
-package alg.pop;
+package lc;
 
 
-import annotation.Reverse;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;

@@ -1,4 +1,4 @@
-package alg.pop;
+package lc;
 
 import annotation.DissimilarityWeight;
 import annotation.UnpopWeight;
@@ -19,8 +19,6 @@ import util.ContentUtil;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 public class AlgPopItemScorer extends AbstractItemScorer {
 	private AlgPopModel model;
@@ -52,7 +50,7 @@ public class AlgPopItemScorer extends AbstractItemScorer {
 			if (dissimilarityWeight != 0.0) {
 				dissim = getDissim(user, e.getKey());
 			}
-			double unpop = 1 - model.getPop(e.getKey());
+			double unpop = 1.0 - model.getPop(e.getKey());
 			double rating = itemScorer.score(user, e.getKey());
 			double total = unpopWeight * unpop + relevanceWeight * rating / 5 + dissimilarityWeight * dissim;
 			scores.set(e, total);

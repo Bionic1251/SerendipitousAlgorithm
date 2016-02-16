@@ -1,4 +1,4 @@
-package alg.pop;
+package lc;
 
 import org.grouplens.grapht.annotation.DefaultProvider;
 import org.grouplens.lenskit.core.Shareable;
