@@ -125,15 +125,9 @@ public class ExperimentRunner {
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(AlgorithmUtil.THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
 		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
-		evaluator.addMetric(new PrecisionRecallTopNMetric(prefix, "", 5, candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		//evaluator.addMetric(new AggregateSerendipityTopNMetric("content." + prefix, SHORT_HEAD_END, candidates, exclude, threshold, itemContentMap, LONG_TAIL_START));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK23" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.2));
-		evaluator.addMetric(new CoveragePredictMetric());
-		/*evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK24" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.4));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK25" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.5));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK26" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.6));*/
+		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.2));
 	}
 
 	private static LongSet getPopItems(int popNum) {
