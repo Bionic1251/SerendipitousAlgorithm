@@ -38,11 +38,11 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 	public AdaModel get() {
 		System.out.println(AdaModelBuilder.class);
 		AdaModel model = createModel();
-		//countError(model);
-		//for (int i = 0; i < 2; i++) {
-		learnParameters(model); //it converges quickly
-		//countError(model);
-		//}
+		countError(model);
+		for (int i = 0; i < 3; i++) {
+			learnParameters(model); //it converges quickly
+			countError(model);
+		}
 		return model;
 	}
 

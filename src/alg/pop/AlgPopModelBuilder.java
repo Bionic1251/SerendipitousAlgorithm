@@ -1,4 +1,4 @@
-package pop;
+package alg.pop;
 
 
 import annotation.Reverse;
@@ -9,20 +9,19 @@ import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
-public class PopModelBuilder implements Provider<PopModel> {
+public class AlgPopModelBuilder implements Provider<AlgPopModel> {
 	protected final PreferenceSnapshot snapshot;
-	private final boolean reverse;
 
 	@Inject
-	public PopModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot, @Reverse boolean reverse) {
+	public AlgPopModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot) {
 		this.snapshot = snapshot;
-		this.reverse = reverse;
 	}
 
 	@Override
-	public PopModel get() {
+	public AlgPopModel get() {
 		Map<Long, Container> itemMap = new HashMap<Long, Container>();
 		for (IndexedPreference rating : snapshot.getRatings()) {
 			Container container = new Container(rating.getItemId());
@@ -32,13 +31,21 @@ public class PopModelBuilder implements Provider<PopModel> {
 			container.addRating(rating.getValue());
 			itemMap.put(rating.getItemId(), container);
 		}
-		return new PopModel(itemMap, reverse);
+		double maxNum = 0;
+		for (Container container : itemMap.values()) {
+			maxNum = Math.max(container.getRatingNumber(), maxNum);
+		}
+
+		for (Container container : itemMap.values()) {
+			container.setRatingNumber(container.getRatingNumber() / maxNum);
+		}
+		return new AlgPopModel(itemMap);
 	}
 
 	public static class Container implements Comparable<Container> {
 		private Long id;
 		private Double ratingSum = 0.0;
-		private Integer ratingNumber = 0;
+		private Double ratingNumber = 0.0;
 
 		private Container(Long id) {
 			this.id = id;
@@ -49,7 +56,11 @@ public class PopModelBuilder implements Provider<PopModel> {
 			ratingNumber++;
 		}
 
-		public Integer getRatingNumber() {
+		public void setRatingNumber(Double ratingNumber) {
+			this.ratingNumber = ratingNumber;
+		}
+
+		public Double getRatingNumber() {
 			return ratingNumber;
 		}
 

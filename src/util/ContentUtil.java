@@ -1,5 +1,12 @@
 package util;
 
+import it.unimi.dsi.fastutil.longs.LongCollection;
+import it.unimi.dsi.fastutil.longs.LongSet;
+import org.grouplens.lenskit.data.event.Event;
+import org.grouplens.lenskit.data.history.UserHistory;
+import org.grouplens.lenskit.data.pref.IndexedPreference;
+import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
+import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 
@@ -8,6 +15,51 @@ import java.util.*;
 
 public class ContentUtil {
 	private static int[] termDocFreq;
+
+	public static double getCosine(SparseVector vector1, SparseVector vector2) {
+		if (vector1 == null || vector2 == null) {
+			return 0.0;
+		}
+		double dot = vector1.dot(vector2);
+		double denom = vector1.norm() * vector2.norm();
+		if (denom == 0) {
+			return 0.0;
+		}
+		return dot / denom;
+	}
+
+	public static SparseVector getUserSparseVector(UserHistory<Event> events, Map<Long, SparseVector> itemContentMap) {
+		LongSet set = events.itemSet();
+		return getUserSparseVector(set, itemContentMap);
+	}
+
+	public static SparseVector getUserSparseVector(Collection<Long> itemIds, Map<Long, SparseVector> itemContentMap) {
+		Map<Long, Double> prefMap = new HashMap<Long, Double>();
+		for (Long itemId : itemIds) {
+			if (!itemContentMap.containsKey(itemId)) {
+				continue;
+			}
+			SparseVector vector = itemContentMap.get(itemId);
+			for (long key : vector.keySet()) {
+				double feature = 1.0;//vector.get(key);
+				Double val = 0.0;
+				if (prefMap.containsKey(key)) {
+					val = prefMap.get(key);
+				}
+				val += feature;
+				prefMap.put(key, val);
+			}
+		}
+		return mapToVector(prefMap);
+	}
+
+	private static SparseVector mapToVector(Map<Long, Double> prefMap) {
+		MutableSparseVector vector = MutableSparseVector.create(prefMap.keySet());
+		for (Map.Entry<Long, Double> entry : prefMap.entrySet()) {
+			vector.set(entry.getKey(), entry.getValue());
+		}
+		return vector;
+	}
 
 	public static Map<Long, SparseVector> getItemContentMap(String path) {
 		Map<Long, SparseVector> itemContentMap = new HashMap<Long, SparseVector>();
@@ -27,7 +79,7 @@ public class ContentUtil {
 		MutableSparseVector vector = MutableSparseVector.create(keys);
 		for (int i = 0; i < termDocFreq.length; i++) {
 			if (set.get(i)) {
-				double tfidf = getTFIDF(docNum, i);
+				double tfidf = 1.0;// getTFIDF(docNum, i);
 				vector.set((long) i, tfidf);
 			}
 		}
@@ -72,5 +124,78 @@ public class ContentUtil {
 			e.printStackTrace();
 		}
 		return vecMap;
+	}
+
+	public static Map<Long, SparseVector> getUserItemMap(PreferenceSnapshot snapshot, Map<Long, SparseVector> itemContentMap) {
+		System.out.println("Content distance calculation (vectors)");
+		Map<Long, SparseVector> userItemDissimilarityMap = new HashMap<Long, SparseVector>();
+		LongCollection userIds = snapshot.getUserIds();
+		LongCollection itemIds = snapshot.getItemIds();
+		int size = userIds.size();
+		int maxCount = 0;
+		for (long userId : userIds) {
+			MutableSparseVector itemDissimilarityVector = MutableSparseVector.create(itemIds, 0.0);
+			Collection<IndexedPreference> ratings = snapshot.getUserRatings(userId);
+			Set<Long> ratedItemIdSet = new HashSet<Long>();
+			for (IndexedPreference rating : ratings) {
+				ratedItemIdSet.add(rating.getItemId());
+			}
+			SparseVector userVector = getUserSparseVector(ratedItemIdSet, itemContentMap);
+			for (long itemId : itemIds) {
+				double dissimilaritySum = 0;
+				SparseVector itemVector = itemContentMap.get(itemId);
+				dissimilaritySum = 1 - getCosine(itemVector, userVector);
+				if (Double.isNaN(dissimilaritySum)) {
+					System.out.println(dissimilaritySum);
+				}
+				itemDissimilarityVector.set(itemId, dissimilaritySum);
+			}
+			userItemDissimilarityMap.put(userId, itemDissimilarityVector);
+			size--;
+			if (size % 100 == 0) {
+				System.out.println(size + " left");
+			}
+		}
+		System.out.println("Count " + maxCount);
+		return userItemDissimilarityMap;
+	}
+
+	public static Map<Long, SparseVector> getUserItemMapZheng(PreferenceSnapshot snapshot, Map<Long, SparseVector> itemContentMap) {
+		System.out.println("Content distance calculation (dissimilarity)");
+		Map<Long, SparseVector> userItemDissimilarityMap = new HashMap<Long, SparseVector>();
+		LongCollection userIds = snapshot.getUserIds();
+		LongCollection itemIds = snapshot.getItemIds();
+		int size = userIds.size();
+		int maxCount = 0;
+		for (long userId : userIds) {
+			MutableSparseVector itemDissimilarityVector = MutableSparseVector.create(itemIds, 0.0);
+			Collection<IndexedPreference> ratings = snapshot.getUserRatings(userId);
+			for (long itemId : itemIds) {
+				double dissimilaritySum = 0;
+				int count = 0;
+				SparseVector itemVector = itemContentMap.get(itemId);
+				for (IndexedPreference rating : ratings) {
+					SparseVector ratedItemVector = itemContentMap.get(rating.getItemId());
+					dissimilaritySum += 1 - getCosine(itemVector, ratedItemVector);
+					count++;
+				}
+				maxCount = Math.max(maxCount, count);
+				if (count == 0) {
+					continue;
+				}
+				dissimilaritySum = dissimilaritySum / count;
+				if (Double.isNaN(dissimilaritySum)) {
+					System.out.println(count + " !!!");
+				}
+				itemDissimilarityVector.set(itemId, dissimilaritySum);
+			}
+			userItemDissimilarityMap.put(userId, itemDissimilarityVector);
+			size--;
+			if (size % 100 == 0) {
+				System.out.println(size + " left");
+			}
+		}
+		System.out.println("Count " + maxCount);
+		return userItemDissimilarityMap;
 	}
 }

@@ -1,4 +1,7 @@
-import evaluationMetric.*;
+import evaluationMetric.AggregateNDCGTopNMetric;
+import evaluationMetric.AggregatePopSerendipityTopNMetric;
+import evaluationMetric.AggregatePrecisionRecallTopNMetric;
+import evaluationMetric.AggregateSerendipityTopNMetric;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import org.grouplens.lenskit.core.LenskitConfiguration;
 import org.grouplens.lenskit.cursors.Cursor;
@@ -14,6 +17,8 @@ import org.grouplens.lenskit.data.text.TextEventDAO;
 import org.grouplens.lenskit.eval.data.crossfold.CrossfoldTask;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
+import org.grouplens.lenskit.eval.metrics.topn.NDCGTopNMetric;
+import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
@@ -28,9 +33,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 
-public class SmallExperimentRunner {
+public class MylExperimentRunner {
 	private static final int CROSSFOLD_NUMBER = 1;
-	private static final int HOLDOUT_NUMBER = 15;
+	private static final int HOLDOUT_NUMBER = 5;
 	private static final int AT_N = 30;
 	private static final int START_AT_N = 1;
 	private static final int SHORT_HEAD_END = 9;
@@ -38,11 +43,10 @@ public class SmallExperimentRunner {
 	private static final int POPULAR_ITEMS_NUMBER = 22;
 	private static final int POPULAR_ITEMS_FOR_CANDIDATES = 50;
 	private static final int POPULAR_ITEMS_FOR_CANDIDATES2 = 30;
-	private static final int POPULAR_ITEMS_FOR_CANDIDATES3 = 200;
+	private static final int POPULAR_ITEMS_FOR_CANDIDATES3 = 2;
 	private static final double THRESHOLD = 3.0;
-	private static final String DATASET = "ml/small/ratings.dat";
-	private static final String DATASET_CONTENT = "ml/small/content.dat";
-	private static final String TRAIN_TEST_FOLDER_NAME = "task";
+	private static final String DATASET = "D:\\bigdata\\movielens\\fake\\all_ratings_extended";
+	private static final String TRAIN_TEST_FOLDER_NAME = "my";
 	private static final String OUTPUT_PATH = "/out.csv";
 	private static final String OUTPUT_USER_PATH = "/user.csv";
 	private static final String OUTPUT_ITEM_PATH = "/item.csv";
@@ -51,7 +55,8 @@ public class SmallExperimentRunner {
 	private static final double MAX = 5;
 
 	private static DelimitedColumnEventFormat eventFormat;
-	private static Map<Long, SparseVector> itemContentMap;
+
+	private static final int FEATURE_COUNT = 2;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
@@ -63,11 +68,11 @@ public class SmallExperimentRunner {
 		evaluator.addDataset(task);
 
 		Date cur = new Date();
-		SimpleDateFormat format = new SimpleDateFormat("dd.MM.yy_HH.mm.ss");
+		String format = "my/";
 
-		evaluator.setOutputPath("out/" + format.format(cur) + OUTPUT_PATH);
-		evaluator.setUserOutputPath("out/" + format.format(cur) + OUTPUT_USER_PATH);
-		evaluator.setPredictOutputPath("out/" + format.format(cur) + OUTPUT_ITEM_PATH);
+		evaluator.setOutputPath("out/" + format + OUTPUT_PATH);
+		evaluator.setUserOutputPath("out/" + format + OUTPUT_USER_PATH);
+		evaluator.setPredictOutputPath("out/" + format + OUTPUT_ITEM_PATH);
 	}
 
 	public static void main(String args[]) {
@@ -93,9 +98,6 @@ public class SmallExperimentRunner {
 			}
 		}
 
-
-		itemContentMap = ContentUtil.getItemContentMap(DATASET_CONTENT);
-
 		addEvaluationMetrics(evaluator);
 
 		try {
@@ -113,9 +115,9 @@ public class SmallExperimentRunner {
 		addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES2 + "pop");*/
 
 		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(POPULAR_ITEMS_FOR_CANDIDATES3)), ItemSelectors.testItems());
-		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES3 + "pop");
+		addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES3 + "pop");
 
-		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
@@ -125,10 +127,9 @@ public class SmallExperimentRunner {
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, ItemSelector candidates, String prefix) {
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
-		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
-		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateSerendipityTopNMetric("content." + prefix, SHORT_HEAD_END, candidates, exclude, threshold, itemContentMap, LONG_TAIL_START));
+		evaluator.addMetric(new PrecisionRecallTopNMetric(prefix, "", 2, candidates, exclude, threshold));
+		evaluator.addMetric(new NDCGTopNMetric(prefix, "", 2, candidates, exclude));
+		/*evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_NUMBER, candidates, exclude, threshold));*/
 	}
 
 	private static LongSet getPopItems(int popNum) {

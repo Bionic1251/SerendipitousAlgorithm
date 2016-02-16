@@ -21,20 +21,26 @@ import org.grouplens.lenskit.vectors.SparseVector;
 import java.util.*;
 
 
-public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, PopSerendipityTopNMetric.Result, PopSerendipityTopNMetric.Result> {
+public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, AggregatePopSerendipityTopNMetric.AggregateResult, AggregatePopSerendipityTopNMetric.AggregateResult> {
 	protected Map<Long, Set<Long>> expectedMap;
 	protected List<Container> expectedItemContainers;
 	private Set<Long> defaultExpectedItems;
 	protected final int expectedItemsNumber;
-	private final int evaluationListSize;
 	private final ItemSelector goodItems;
 	private final ItemSelector candidates;
 	private final ItemSelector exclude;
 	private final String suffix;
 
-	public PopSerendipityTopNMetric(String suffix, int listSize, int number, ItemSelector candidates, ItemSelector exclude, ItemSelector goodItems) {
-		super(PopSerendipityTopNMetric.Result.class, PopSerendipityTopNMetric.Result.class);
-		this.evaluationListSize = listSize;
+	private MeanAccumulator context1;
+	private MeanAccumulator context5;
+	private MeanAccumulator context10;
+	private MeanAccumulator context15;
+	private MeanAccumulator context20;
+	private MeanAccumulator context25;
+	private MeanAccumulator context30;
+
+	public AggregatePopSerendipityTopNMetric(String suffix, int number, ItemSelector candidates, ItemSelector exclude, ItemSelector goodItems) {
+		super(AggregateResult.class, AggregateResult.class);
 		this.goodItems = goodItems;
 		this.suffix = suffix;
 		expectedItemsNumber = number;
@@ -48,15 +54,28 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 	}
 
 	@Override
-	protected PopSerendipityTopNMetric.Result doMeasureUser(TestUser user, MeanAccumulator context) {
-		List<ScoredId> recommendations = user.getRecommendations(evaluationListSize, candidates, exclude);
+	protected AggregateResult doMeasureUser(TestUser user, MeanAccumulator context) {
+		List<ScoredId> recommendations = user.getRecommendations(30, candidates, exclude);
 		if (recommendations == null || recommendations.isEmpty()) {
 			return null;
 		}
+		double ser1 = measureUser(user, context1, recommendations, 1);
+		double ser5 = measureUser(user, context5, recommendations, 5);
+		double ser10 = measureUser(user, context10, recommendations, 10);
+		double ser15 = measureUser(user, context15, recommendations, 15);
+		double ser20 = measureUser(user, context20, recommendations, 20);
+		double ser25 = measureUser(user, context25, recommendations, 25);
+		double ser30 = measureUser(user, context30, recommendations, 30);
+		return new AggregateResult(ser1, ser5, ser10, ser15, ser20, ser25, ser30, 1);
+	}
 
+	protected double measureUser(TestUser user, MeanAccumulator context, List<ScoredId> recommendations, int listSize) {
+		if (recommendations.size() > listSize) {
+			recommendations = new ArrayList<ScoredId>(recommendations.subList(0, listSize));
+		}
 		LongSet goodItems = this.goodItems.select(user);
 		if (goodItems == null || goodItems.isEmpty()) {
-			return new Result(0.0, 1);
+			return 0.0;
 		}
 
 		Set<Long> serendipitousItems = new HashSet<Long>();
@@ -67,7 +86,7 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 			}
 		}
 		if (serendipitousItems.isEmpty()) {
-			return new PopSerendipityTopNMetric.Result(0.0, 1);
+			return 0.0;
 		}
 		int serendipityCount = 0;
 		for (ScoredId scoredId : recommendations) {
@@ -76,18 +95,33 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 			}
 		}
 		//double number = serendipitousItems.size() > evaluationListSize ? evaluationListSize : serendipitousItems.size();
-		double value = (double) serendipityCount / evaluationListSize;
+		double value = (double) serendipityCount / listSize;
 		context.add(value);
-		return new PopSerendipityTopNMetric.Result(value, 1);
+		return value;
 	}
 
 	@Override
-	protected PopSerendipityTopNMetric.Result getTypedResults(MeanAccumulator context) {
-		return new PopSerendipityTopNMetric.Result(context.getMean(), context.getCount());
+	protected AggregateResult getTypedResults(MeanAccumulator context) {
+		long count = context30.getCount();
+		double ser1 = context1.getMean();
+		double ser5 = context5.getMean();
+		double ser10 = context10.getMean();
+		double ser15 = context15.getMean();
+		double ser20 = context20.getMean();
+		double ser25 = context25.getMean();
+		double ser30 = context30.getMean();
+		return new AggregateResult(ser1, ser5, ser10, ser15, ser20, ser25, ser30, count);
 	}
 
 	@Override
 	public MeanAccumulator createContext(Attributed algorithm, TTDataSet dataSet, Recommender recommender) {
+		context1 = new MeanAccumulator();
+		context5 = new MeanAccumulator();
+		context10 = new MeanAccumulator();
+		context15 = new MeanAccumulator();
+		context20 = new MeanAccumulator();
+		context25 = new MeanAccumulator();
+		context30 = new MeanAccumulator();
 		updateExpectedItems(dataSet);
 		return new MeanAccumulator();
 	}
@@ -129,15 +163,39 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 		return defaultExpectedItems;
 	}
 
-	public static class Result {
-		@ResultColumn("Serendipity")
-		public final double utility;
+	public static class AggregateResult {
+		@ResultColumn("Serendipity1")
+		public final double ser1;
+
+		@ResultColumn("Serendipity5")
+		public final double ser5;
+
+		@ResultColumn("Serendipity10")
+		public final double ser10;
+
+		@ResultColumn("Serendipity15")
+		public final double ser15;
+
+		@ResultColumn("Serendipity20")
+		public final double ser20;
+
+		@ResultColumn("Serendipity25")
+		public final double ser25;
+
+		@ResultColumn("Serendipity30")
+		public final double ser301;
 
 		@ResultColumn("SerendipityCount")
 		public final long count;
 
-		public Result(double util, long count) {
-			utility = util;
+		public AggregateResult(double ser1, double ser5, double ser10, double ser15, double ser20, double ser25, double ser301, long count) {
+			this.ser1 = ser1;
+			this.ser5 = ser5;
+			this.ser10 = ser10;
+			this.ser15 = ser15;
+			this.ser20 = ser20;
+			this.ser25 = ser25;
+			this.ser301 = ser301;
 			this.count = count;
 		}
 	}

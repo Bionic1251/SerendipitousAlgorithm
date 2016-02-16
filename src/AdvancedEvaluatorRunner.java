@@ -53,7 +53,7 @@ import java.util.*;
 
 public class AdvancedEvaluatorRunner {
 	private static final int CROSSFOLD_NUMBER = 1;
-	private static final int MY_HOLDOUT_NUMBER = 3;
+	private static final int MY_HOLDOUT_NUMBER = 15;
 	private static final int HOLDOUT_NUMBER = 10;
 	private static final int MY_AT_N = 5;
 	private static final int AT_N = 30;
@@ -129,7 +129,7 @@ public class AdvancedEvaluatorRunner {
 		//evaluator.addAlgorithm("SVD", AlgorithmUtil.getSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("ZhengSVD", AlgorithmUtil.getZhengSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("ZhengFunkSVD", AlgorithmUtil.getZhengFunkSVD(FEATURE_COUNT));
-		evaluator.addAlgorithm("AdaSVD", AlgorithmUtil.getAdaSVD(FEATURE_COUNT));
+		//evaluator.addAlgorithm("AdaSVD", AlgorithmUtil.getAdaSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("AdaFunkSVD", AlgorithmUtil.getAdaFunkSVD(FEATURE_COUNT));
 		//evaluator.addAlgorithm("ItemItem", AlgorithmUtil.getItemItem());
 		//evaluator.addAlgorithm("Random", AlgorithmUtil.getRandom());
