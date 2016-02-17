@@ -7,11 +7,11 @@ import funkSVD.lu.LuUpdateRule;
 import funkSVD.lu.LuUpdateRuleBaysian;
 import funkSVD.lu.LuUpdateRuleHinge;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
-import jdk.nashorn.internal.objects.annotations.Setter;
 import lc.advanced.LCAdvancedItemScorer;
 import lc.basic.LCItemScorer;
 import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
+import mf.pureSVD.PureSVDItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
 import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.baseline.BaselineScorer;
@@ -340,6 +340,18 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
+	private static LenskitConfiguration getPureSVD() {
+		LenskitConfiguration pureSVD = new LenskitConfiguration();
+		pureSVD.bind(ItemScorer.class).to(PureSVDItemScorer.class);
+		pureSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		pureSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		pureSVD.set(FeatureCount.class).to(FEATURE_COUNT);
+		pureSVD.set(LearningRate.class).to(ZHENG_LEARNING_RATE);
+		pureSVD.set(RegularizationTerm.class).to(ZHENG_REGULARIZATION_TERM);
+		pureSVD.set(IterationCount.class).to(ITERATION_COUNT);
+		return pureSVD;
+	}
+
 	// POP POPReverse
 	public static Map<String, LenskitConfiguration> getMap() {
 		Map<String, LenskitConfiguration> configurationMap = new HashMap<String, LenskitConfiguration>();
@@ -369,6 +381,7 @@ public class AlgorithmUtil {
 		configurationMap.put("LCU", AlgorithmUtil.getLCU());
 		configurationMap.put("LCD", AlgorithmUtil.getLCD());
 		configurationMap.put("LCAdvanced", AlgorithmUtil.getAdvancedLC());
+		configurationMap.put("PureSVD", AlgorithmUtil.getPureSVD());
 		return configurationMap;
 	}
 }
