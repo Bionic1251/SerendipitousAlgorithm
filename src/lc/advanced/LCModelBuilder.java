@@ -28,8 +28,8 @@ public class LCModelBuilder implements Provider<LCModel> {
 	private Map<Long, SparseVector> userItemDissimilarityMap;
 	private final PreferenceDomain domain;
 
-	private final double dThreshold = 0.6;
-	private final double uThreshold = 0.6;
+	private final double dThreshold = 0.2;
+	private final double uThreshold = 0.2;
 
 	private final double learningRate = 0.0001;
 	private final double regularizationTerm = 0.001;

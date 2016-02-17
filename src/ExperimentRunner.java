@@ -48,8 +48,8 @@ public class ExperimentRunner {
 	private static String OUTPUT_USER_PATH = "/user.csv";
 	private static String OUTPUT_ITEM_PATH = "/item.csv";
 
-	private static double D_THRESHOLD = 0.6;
-	private static double U_THRESHOLD = 0.6;
+	private static double D_THRESHOLD = 0.2;
+	private static double U_THRESHOLD = 0.2;
 
 	private static double MIN = 0;
 	private static double MAX = 5;
