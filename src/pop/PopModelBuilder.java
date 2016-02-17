@@ -9,6 +9,7 @@ import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import java.io.Serializable;
 import java.util.*;
 
 public class PopModelBuilder implements Provider<PopModel> {
@@ -35,7 +36,7 @@ public class PopModelBuilder implements Provider<PopModel> {
 		return new PopModel(itemMap, reverse);
 	}
 
-	public static class Container implements Comparable<Container> {
+	public static class Container implements Comparable<Container>, Serializable {
 		private Long id;
 		private Double ratingSum = 0.0;
 		private Integer ratingNumber = 0;

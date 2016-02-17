@@ -48,6 +48,9 @@ public class ExperimentRunner {
 	private static String OUTPUT_USER_PATH = "/user.csv";
 	private static String OUTPUT_ITEM_PATH = "/item.csv";
 
+	private static double D_THRESHOLD = 0.6;
+	private static double U_THRESHOLD = 0.6;
+
 	private static double MIN = 0;
 	private static double MAX = 5;
 
@@ -127,7 +130,7 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, 0.2, 0.2));
+		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, U_THRESHOLD, D_THRESHOLD));
 	}
 
 	private static LongSet getPopItems(int popNum) {

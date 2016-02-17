@@ -1,14 +1,15 @@
 package util;
 
 import adamopoulos.AdaItemScorer;
-import lc.AlgPopItemScorer;
 import annotation.*;
 import funkSVD.lu.LuFunkSVDItemScorer;
 import funkSVD.lu.LuUpdateRule;
 import funkSVD.lu.LuUpdateRuleBaysian;
 import funkSVD.lu.LuUpdateRuleHinge;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
-import lc.advanced.LCItemScorer;
+import jdk.nashorn.internal.objects.annotations.Setter;
+import lc.advanced.LCAdvancedItemScorer;
+import lc.basic.LCItemScorer;
 import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
 import mf.zheng.ZhengSVDItemScorer;
@@ -149,7 +150,7 @@ public class AlgorithmUtil {
 	}
 
 	public static LenskitConfiguration getZhengSVDBasic() {
-		LenskitConfiguration zhengSVD  = getZhengSVDTemplate();
+		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
 		zhengSVD.set(Alpha.class).to(0);
 		return zhengSVD;
 	}
@@ -264,19 +265,6 @@ public class AlgorithmUtil {
 		return pop;
 	}
 
-	private static LenskitConfiguration getAlg() {
-		LenskitConfiguration alg = new LenskitConfiguration();
-		alg.bind(ItemScorer.class).to(AlgPopItemScorer.class);
-		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
-		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
-		alg.set(FeatureCount.class).to(FEATURE_COUNT);
-		alg.set(LearningRate.class).to(LEARNING_RATE);
-		alg.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
-		alg.set(IterationCount.class).to(ITERATION_COUNT);
-		return alg;
-	}
-
 	private static LenskitConfiguration getLC() {
 		LenskitConfiguration alg = new LenskitConfiguration();
 		alg.bind(ItemScorer.class).to(LCItemScorer.class);
@@ -287,69 +275,71 @@ public class AlgorithmUtil {
 		alg.set(LearningRate.class).to(LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
 		alg.set(IterationCount.class).to(ITERATION_COUNT);
-
-		alg.set(UnpopWeight.class).to(0.12);
-		alg.set(DissimilarityWeight.class).to(0.12);
-		alg.set(RelevanceWeight.class).to(0.12);
-
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgAll() {
-		LenskitConfiguration alg = getAlg();
-		alg.set(UnpopWeight.class).to(1.0);
-		alg.set(DissimilarityWeight.class).to(1.0);
-		alg.set(RelevanceWeight.class).to(1.0);
+	public static LenskitConfiguration getLCRDU() {
+		LenskitConfiguration alg = getLC();
+		alg.set(UnpopWeight.class).to(1.1);
+		alg.set(DissimilarityWeight.class).to(1.1);
+		alg.set(RelevanceWeight.class).to(1.1);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgDissimUnpop() {
-		LenskitConfiguration alg = getAlg();
-		alg.set(UnpopWeight.class).to(0.3);
-		alg.set(DissimilarityWeight.class).to(0.3);
+	public static LenskitConfiguration getLCDU() {
+		LenskitConfiguration alg = getLC();
+		alg.set(UnpopWeight.class).to(0.31);
+		alg.set(DissimilarityWeight.class).to(0.31);
 		alg.set(RelevanceWeight.class).to(0.0);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgDissimRel() {
-		LenskitConfiguration alg = getAlg();
+	public static LenskitConfiguration getLCRD() {
+		LenskitConfiguration alg = getLC();
 		alg.set(UnpopWeight.class).to(0.0);
-		alg.set(DissimilarityWeight.class).to(0.5);
-		alg.set(RelevanceWeight.class).to(0.5);
+		alg.set(DissimilarityWeight.class).to(0.51);
+		alg.set(RelevanceWeight.class).to(0.51);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgUnpopRel() {
-		LenskitConfiguration alg = getAlg();
+	public static LenskitConfiguration getLCRU() {
+		LenskitConfiguration alg = getLC();
 		alg.set(UnpopWeight.class).to(0.6);
 		alg.set(DissimilarityWeight.class).to(0.0);
 		alg.set(RelevanceWeight.class).to(0.6);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgUnpop() {
-		LenskitConfiguration alg = getAlg();
-		alg.set(UnpopWeight.class).to(0.8);
+	public static LenskitConfiguration getLCU() {
+		LenskitConfiguration alg = getLC();
+		alg.set(UnpopWeight.class).to(0.81);
 		alg.set(DissimilarityWeight.class).to(0.0);
 		alg.set(RelevanceWeight.class).to(0.0);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgDissim() {
-		LenskitConfiguration alg = getAlg();
+	public static LenskitConfiguration getLCD() {
+		LenskitConfiguration alg = getLC();
 		alg.set(UnpopWeight.class).to(0.0);
 		alg.set(DissimilarityWeight.class).to(0.7);
 		alg.set(RelevanceWeight.class).to(0.0);
 		return alg;
 	}
 
-	public static LenskitConfiguration getAlgSim() {
-		LenskitConfiguration alg = getAlg();
-		alg.set(UnpopWeight.class).to(0.0);
-		alg.set(DissimilarityWeight.class).to(-0.1);
-		alg.set(RelevanceWeight.class).to(0.0);
+	private static LenskitConfiguration getAdvancedLC() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(LCAdvancedItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.set(FeatureCount.class).to(FEATURE_COUNT);
+		alg.set(LearningRate.class).to(LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(ITERATION_COUNT);
+		alg.set(Threshold.class).to(THRESHOLD);
 		return alg;
 	}
+
 	// POP POPReverse
 	public static Map<String, LenskitConfiguration> getMap() {
 		Map<String, LenskitConfiguration> configurationMap = new HashMap<String, LenskitConfiguration>();
@@ -372,14 +362,13 @@ public class AlgorithmUtil {
 		configurationMap.put("AdaFunkSVD", AlgorithmUtil.getAdaFunkSVD());
 		configurationMap.put("ItemItem", AlgorithmUtil.getItemItem());
 		configurationMap.put("Random", AlgorithmUtil.getRandom());
-		configurationMap.put("AlgAll", AlgorithmUtil.getAlgAll());
-		configurationMap.put("AlgDissimUnpop", AlgorithmUtil.getAlgDissimUnpop());
-		configurationMap.put("LCDU", AlgorithmUtil.getLC());
-		configurationMap.put("AlgDissimRel", AlgorithmUtil.getAlgDissimRel());
-		configurationMap.put("AlgUnpopRel", AlgorithmUtil.getAlgUnpopRel());
-		configurationMap.put("AlgUnpop", AlgorithmUtil.getAlgUnpop());
-		configurationMap.put("AlgDissim", AlgorithmUtil.getAlgDissim());
-		configurationMap.put("AlgSim", AlgorithmUtil.getAlgSim());
+		configurationMap.put("LCRDU", AlgorithmUtil.getLCRDU());
+		configurationMap.put("LCDU", AlgorithmUtil.getLCDU());
+		configurationMap.put("LCRD", AlgorithmUtil.getLCRD());
+		configurationMap.put("LCRU", AlgorithmUtil.getLCRU());
+		configurationMap.put("LCU", AlgorithmUtil.getLCU());
+		configurationMap.put("LCD", AlgorithmUtil.getLCD());
+		configurationMap.put("LCAdvanced", AlgorithmUtil.getAdvancedLC());
 		return configurationMap;
 	}
 }
