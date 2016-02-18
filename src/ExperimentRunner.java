@@ -50,11 +50,12 @@ public class ExperimentRunner {
 	private static double MAX = 5;
 
 	private static DelimitedColumnEventFormat eventFormat;
+	private static PreferenceDomain preferenceDomain;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
-		setParameters();
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(DATASET), eventFormat), new PreferenceDomain(MIN, MAX));
+		preferenceDomain = new PreferenceDomain(MIN, MAX);
+		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(DATASET), eventFormat), preferenceDomain);
 		CrossfoldTask task = new CrossfoldTask(TRAIN_TEST_FOLDER_NAME);
 		task.setHoldout(HOLDOUT_NUMBER);
 		task.setPartitions(CROSSFOLD_NUMBER);
@@ -70,6 +71,7 @@ public class ExperimentRunner {
 	}
 
 	public static void main(String algs[]) {
+		setParameters();
 		SimpleEvaluator evaluator = new SimpleEvaluator();
 		setEvaluator(evaluator);
 
@@ -124,7 +126,7 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.R_THRESHOLD,
-				AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD));
+				AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD, preferenceDomain));
 	}
 
 	private static LongSet getPopItems(int popNum) {
