@@ -44,6 +44,7 @@ import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.ContentAverageDissimilarity;
 import util.ContentUtil;
 
 import java.io.File;
@@ -85,14 +86,14 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 	 * @param exclude    The exclude selector.
 	 */
 	public AggregateSerendipityNDCGMetric(String pre, String sfx, ItemSelector candidates, ItemSelector exclude,
-										  double threshold, Map<Long, SparseVector> itemContentMap,
-										  double unpopThreshold, double dissThreshold) {
+										  double threshold, double unpopThreshold, double dissThreshold) {
 		super(AggregateResult.class, AggregateResult.class);
 		suffix = sfx;
 		prefix = pre;
 		this.candidates = candidates;
 		this.exclude = exclude;
-		this.itemContentMap = itemContentMap;
+		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
+		this.itemContentMap = contentAverageDissimilarity.getItemContentMap();
 		relevanceTheshold = threshold;
 		this.unpopTheshold = unpopThreshold;
 		dissimTheshold = dissThreshold;

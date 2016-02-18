@@ -1,7 +1,7 @@
 package adamopoulos;
 
+import annotation.R_Threshold;
 import annotation.RatingPredictor;
-import annotation.Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.core.Transient;
@@ -26,7 +26,7 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 
 	@Inject
 	public AdaModelBuilder(@RatingPredictor ItemScorer baseline, ItemItemModel itemItemModel, PopModel popModel,
-						   @Transient @Nonnull PreferenceSnapshot snapshot, @Threshold double threshold) {
+						   @Transient @Nonnull PreferenceSnapshot snapshot, @R_Threshold double threshold) {
 		this.baseline = baseline;
 		this.itemItemModel = itemItemModel;
 		this.snapshot = snapshot;

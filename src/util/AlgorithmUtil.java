@@ -78,7 +78,7 @@ public class AlgorithmUtil {
 		adaSVD.set(LearningRate.class).to(LEARNING_RATE);
 		adaSVD.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
 		adaSVD.set(IterationCount.class).to(ITERATION_COUNT);
-		adaSVD.set(Threshold.class).to(R_THRESHOLD);
+		adaSVD.set(R_Threshold.class).to(R_THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		return adaSVD;
@@ -94,7 +94,7 @@ public class AlgorithmUtil {
 		adaSVD.set(LearningRate.class).to(LEARNING_RATE);
 		adaSVD.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
 		adaSVD.set(IterationCount.class).to(ITERATION_COUNT);
-		adaSVD.set(Threshold.class).to(R_THRESHOLD);
+		adaSVD.set(R_Threshold.class).to(R_THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		return adaSVD;
@@ -128,32 +128,8 @@ public class AlgorithmUtil {
 		return zhengSVD;
 	}
 
-	public static LenskitConfiguration getZhengSVD() {
-		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
-		zhengSVD.set(Alpha.class).to(1);
-		zhengSVD.set(UnobservedItemsIncluded.class).to(true);
-		zhengSVD.set(ContentBased.class).to(false);
-		return zhengSVD;
-	}
-
 	public static LenskitConfiguration getZhengSVDContent() {
 		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
-		zhengSVD.set(Alpha.class).to(1);
-		zhengSVD.set(UnobservedItemsIncluded.class).to(true);
-		zhengSVD.set(ContentBased.class).to(true);
-		return zhengSVD;
-	}
-
-	public static LenskitConfiguration getZhengSVDObserved() {
-		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
-		zhengSVD.set(Alpha.class).to(1);
-		zhengSVD.set(UnobservedItemsIncluded.class).to(false);
-		return zhengSVD;
-	}
-
-	public static LenskitConfiguration getZhengSVDBasic() {
-		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
-		zhengSVD.set(Alpha.class).to(0);
 		return zhengSVD;
 	}
 
@@ -176,7 +152,7 @@ public class AlgorithmUtil {
 		luSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		luSVD.set(FeatureCount.class).to(FEATURE_COUNT);
 		luSVD.set(IterationCount.class).to(ITERATION_COUNT);
-		luSVD.set(Threshold.class).to(R_THRESHOLD);
+		luSVD.set(R_Threshold.class).to(R_THRESHOLD);
 		luSVD.set(Alpha.class).to(ALPHA);
 		return luSVD;
 	}
@@ -224,7 +200,7 @@ public class AlgorithmUtil {
 		funkSVD.set(LearningRate.class).to(LEARNING_RATE);
 		funkSVD.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
 		funkSVD.set(IterationCount.class).to(ITERATION_COUNT);
-		funkSVD.set(Threshold.class).to(R_THRESHOLD);
+		funkSVD.set(R_Threshold.class).to(R_THRESHOLD);
 		funkSVD.set(Alpha.class).to(ALPHA);
 		return funkSVD;
 	}
@@ -338,7 +314,9 @@ public class AlgorithmUtil {
 		alg.set(LearningRate.class).to(LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(REGULARIZATION_TERM);
 		alg.set(IterationCount.class).to(ITERATION_COUNT);
-		alg.set(Threshold.class).to(R_THRESHOLD);
+		alg.set(R_Threshold.class).to(R_THRESHOLD);
+		alg.set(D_Threshold.class).to(D_THRESHOLD);
+		alg.set(U_Threshold.class).to(U_THRESHOLD);
 		return alg;
 	}
 
@@ -375,12 +353,7 @@ public class AlgorithmUtil {
 
 		configurationMap.put("SVD", AlgorithmUtil.getSVD());
 
-		//Zheng
-		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVD());
-		configurationMap.put("ZhengSVDContent", AlgorithmUtil.getZhengSVDContent());
-		configurationMap.put("ZhengSVDObserved", AlgorithmUtil.getZhengSVDObserved());
-		configurationMap.put("ZhengSVDBasic", AlgorithmUtil.getZhengSVDBasic());
-
+		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVDContent());
 		configurationMap.put("AdaSVD", AlgorithmUtil.getAdaSVD());
 		configurationMap.put("ItemItem", AlgorithmUtil.getItemItem());
 		configurationMap.put("Random", AlgorithmUtil.getRandom());

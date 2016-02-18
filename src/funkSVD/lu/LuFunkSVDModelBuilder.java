@@ -1,7 +1,7 @@
 package funkSVD.lu;
 
 import annotation.Alpha;
-import annotation.Threshold;
+import annotation.R_Threshold;
 import annotation.UpdateRule;
 import funkSVD.MyTrainingEstimator;
 import it.unimi.dsi.fastutil.longs.LongCollection;
@@ -47,7 +47,7 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	public LuFunkSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								 @UpdateRule LuFunkSVDUpdateRule rule,
 								 @FeatureCount int featureCount,
-								 @InitialFeatureValue double initVal, @Threshold double threshold, @Nullable PreferenceDomain dom,
+								 @InitialFeatureValue double initVal, @R_Threshold double threshold, @Nullable PreferenceDomain dom,
 								 @Alpha double alpha, StoppingCondition stop) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;

@@ -1,6 +1,8 @@
 package lc.advanced;
 
-import annotation.Threshold;
+import annotation.D_Threshold;
+import annotation.R_Threshold;
+import annotation.U_Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
@@ -9,6 +11,7 @@ import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.SparseVector;
 import pop.PopModel;
 import util.AlgorithmUtil;
+import util.ContentAverageDissimilarity;
 import util.ContentUtil;
 
 import javax.annotation.Nonnull;
@@ -20,12 +23,11 @@ import java.util.Map;
 public class LCModelBuilder implements Provider<LCModel> {
 	private final PopModel popModel;
 	private final PreferenceSnapshot snapshot;
-	private final double threshold;
+	private final double rThreshold;
+	private final double dThreshold;
+	private final double uThreshold;
 	private Map<Long, SparseVector> userItemDissimilarityMap;
 	private final PreferenceDomain domain;
-
-	private final double dThreshold = 0.2;
-	private final double uThreshold = 0.2;
 
 	private final double learningRate = 0.0001;
 	private final double regularizationTerm = 0.001;
@@ -37,11 +39,15 @@ public class LCModelBuilder implements Provider<LCModel> {
 
 	@Inject
 	public LCModelBuilder(PopModel popModel, @Transient @Nonnull PreferenceSnapshot snapshot,
-						  @Threshold double threshold, PreferenceDomain domain) {
+						  @R_Threshold double rThreshold, @D_Threshold double dThreshold, @U_Threshold double uThreshold,
+						  PreferenceDomain domain) {
 		this.popModel = popModel;
 		this.snapshot = snapshot;
-		this.threshold = threshold;
-		userItemDissimilarityMap = ContentUtil.getUserItemMapZheng(snapshot, AlgorithmUtil.itemContentMap);
+		this.rThreshold = rThreshold;
+		this.dThreshold = dThreshold;
+		this.uThreshold = uThreshold;
+		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
+		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
 		this.domain = domain;
 	}
 
@@ -87,7 +93,7 @@ public class LCModelBuilder implements Provider<LCModel> {
 	}
 
 	private double getSerendipity(Triple triple) {
-		if (triple.rating <= threshold) {
+		if (triple.rating <= rThreshold) {
 			return 0;
 		}
 		if (triple.dissimilarity <= dThreshold) {

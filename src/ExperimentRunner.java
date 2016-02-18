@@ -20,6 +20,7 @@ import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.hamcrest.Matchers;
 import util.AlgorithmUtil;
+import util.ContentAverageDissimilarity;
 import util.ContentUtil;
 import util.MyPopularItemSelector;
 
@@ -49,7 +50,6 @@ public class ExperimentRunner {
 	private static double MAX = 5;
 
 	private static DelimitedColumnEventFormat eventFormat;
-	public static Map<Long, SparseVector> itemContentMap; //public field used by ZhengSVD. Fix it later
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
 		setParameters();
@@ -75,8 +75,7 @@ public class ExperimentRunner {
 
 		addAlgorithms(algs, evaluator);
 
-		itemContentMap = ContentUtil.getItemContentMap(DATASET_CONTENT);
-		AlgorithmUtil.itemContentMap = itemContentMap;
+		ContentAverageDissimilarity.create(DATASET_CONTENT);
 
 		addEvaluationMetrics(evaluator);
 
@@ -124,7 +123,8 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.R_THRESHOLD, itemContentMap, AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD));
+		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.R_THRESHOLD,
+				AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD));
 	}
 
 	private static LongSet getPopItems(int popNum) {

@@ -2,7 +2,7 @@ package mf.lu;
 
 import annotation.Alpha;
 import annotation.NormMult;
-import annotation.Threshold;
+import annotation.R_Threshold;
 import annotation.UpdateRule;
 import funkSVD.lu.LuFunkSVDUpdateRule;
 import funkSVD.lu.UserPreferences;
@@ -15,8 +15,6 @@ import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
-import org.grouplens.lenskit.iterative.LearningRate;
-import org.grouplens.lenskit.iterative.RegularizationTerm;
 import org.grouplens.lenskit.iterative.StoppingCondition;
 import org.grouplens.lenskit.iterative.TrainingLoopController;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
@@ -51,7 +49,7 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 	public LuSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 							 @FeatureCount int featureCount,
 							 @InitialFeatureValue double initVal,
-							 @Threshold double threshold, @Nullable PreferenceDomain dom,
+							 @R_Threshold double threshold, @Nullable PreferenceDomain dom,
 							 @Alpha double alpha, StoppingCondition stop,
 							 @UpdateRule LuFunkSVDUpdateRule rule, @NormMult double mult) {
  		this.featureCount = featureCount;

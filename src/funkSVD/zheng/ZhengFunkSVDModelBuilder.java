@@ -1,7 +1,5 @@
 package funkSVD.zheng;
 
-import annotation.Alpha;
-import annotation.Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import mf.zheng.ZhengSVDModelBuilder;
 import mikera.matrixx.Matrix;
@@ -20,8 +18,6 @@ import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import util.Util;
 
 import javax.annotation.Nonnull;
