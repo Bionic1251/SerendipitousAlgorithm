@@ -12,11 +12,8 @@ import org.grouplens.lenskit.data.text.DelimitedColumnEventFormat;
 import org.grouplens.lenskit.data.text.RatingEventType;
 import org.grouplens.lenskit.data.text.TextEventDAO;
 import org.grouplens.lenskit.eval.data.crossfold.CrossfoldTask;
-import org.grouplens.lenskit.eval.metrics.predict.CoveragePredictMetric;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
-import org.grouplens.lenskit.eval.metrics.topn.NDCGTopNMetric;
-import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
@@ -47,9 +44,6 @@ public class ExperimentRunner {
 	private static String OUTPUT_PATH = "/out.csv";
 	private static String OUTPUT_USER_PATH = "/user.csv";
 	private static String OUTPUT_ITEM_PATH = "/item.csv";
-
-	private static double D_THRESHOLD = 0.2;
-	private static double U_THRESHOLD = 0.2;
 
 	private static double MIN = 0;
 	private static double MAX = 5;
@@ -125,12 +119,12 @@ public class ExperimentRunner {
 	}
 
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, ItemSelector candidates, String prefix) {
-		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(AlgorithmUtil.THRESHOLD));
+		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(AlgorithmUtil.R_THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
 		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.THRESHOLD, itemContentMap, U_THRESHOLD, D_THRESHOLD));
+		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.R_THRESHOLD, itemContentMap, AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD));
 	}
 
 	private static LongSet getPopItems(int popNum) {
@@ -201,8 +195,14 @@ public class ExperimentRunner {
 			OUTPUT_ITEM_PATH = (String) prop.get("outout_item");
 			System.out.println("outout_item " + OUTPUT_ITEM_PATH);
 
-			AlgorithmUtil.THRESHOLD = Double.valueOf((String) prop.get("threshold"));
-			System.out.println("threshold " + AlgorithmUtil.THRESHOLD);
+			AlgorithmUtil.R_THRESHOLD = Double.valueOf((String) prop.get("r_threshold"));
+			System.out.println("r_threshold " + AlgorithmUtil.R_THRESHOLD);
+
+			AlgorithmUtil.D_THRESHOLD = Double.valueOf((String) prop.get("d_threshold"));
+			System.out.println("d_threshold " + AlgorithmUtil.D_THRESHOLD);
+
+			AlgorithmUtil.U_THRESHOLD = Double.valueOf((String) prop.get("u_threshold"));
+			System.out.println("u_threshold " + AlgorithmUtil.U_THRESHOLD);
 
 			AlgorithmUtil.FEATURE_COUNT = Integer.valueOf((String) prop.get("feature_count"));
 			System.out.println("feature_count " + AlgorithmUtil.FEATURE_COUNT);

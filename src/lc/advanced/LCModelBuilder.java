@@ -1,9 +1,7 @@
 package lc.advanced;
 
-import annotation.RatingPredictor;
 import annotation.Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
-import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.pref.PreferenceDomain;
@@ -16,9 +14,7 @@ import util.ContentUtil;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 public class LCModelBuilder implements Provider<LCModel> {
