@@ -41,8 +41,7 @@ public class SVDItemScorer extends AbstractItemScorer {
 			AVector userVector = model.getUserVector(user);
 			AVector itemVector = model.getItemVector(e.getKey());
 			if (itemVector == null) {
-				scores.unset(e.getKey());
-				continue;
+				itemVector = model.getAverageUserVector();
 			}
 			if (userVector == null) {
 				userVector = model.getAverageUserVector();
