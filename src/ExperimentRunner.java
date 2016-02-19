@@ -17,12 +17,8 @@ import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
-import org.grouplens.lenskit.vectors.SparseVector;
 import org.hamcrest.Matchers;
-import util.AlgorithmUtil;
-import util.ContentAverageDissimilarity;
-import util.ContentUtil;
-import util.MyPopularItemSelector;
+import util.*;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -31,43 +27,26 @@ import java.util.Map;
 import java.util.Properties;
 
 public class ExperimentRunner {
-	//properties are overriden in config.properties
-	private static int CROSSFOLD_NUMBER = 1;
-	private static int HOLDOUT_NUMBER = 15;
-	private static int SHORT_HEAD_END = 9;
-	private static int LONG_TAIL_START = 79;
-	private static int POPULAR_ITEMS_SERENDIPITY_NUMBER = 22;
-	private static int RANDOM_ITEMS_FOR_CANDIDATES = 30;
-	private static int POPULAR_ITEMS_FOR_CANDIDATES = 200;
-	private static String DATASET = "ml/small/ratings.dat";
-	private static String DATASET_CONTENT = "ml/small/content.dat";
-	private static String TRAIN_TEST_FOLDER_NAME = "task";
-	private static String OUTPUT_PATH = "/out.csv";
-	private static String OUTPUT_USER_PATH = "/user.csv";
-	private static String OUTPUT_ITEM_PATH = "/item.csv";
-
-	private static double MIN = 0;
-	private static double MAX = 5;
 
 	private static DelimitedColumnEventFormat eventFormat;
-	private static PreferenceDomain preferenceDomain;
+	private static PreferenceDomain domain;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
+		domain = new PreferenceDomain(Settings.MIN, Settings.MAX);
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
-		preferenceDomain = new PreferenceDomain(MIN, MAX);
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(DATASET), eventFormat), preferenceDomain);
-		CrossfoldTask task = new CrossfoldTask(TRAIN_TEST_FOLDER_NAME);
-		task.setHoldout(HOLDOUT_NUMBER);
-		task.setPartitions(CROSSFOLD_NUMBER);
+		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));//, domain);
+		CrossfoldTask task = new CrossfoldTask(Settings.TRAIN_TEST_FOLDER_NAME);
+		task.setHoldout(Settings.HOLDOUT_NUMBER);
+		task.setPartitions(Settings.CROSSFOLD_NUMBER);
 		task.setSource(dataSource);
 		evaluator.addDataset(task);
 
 		Date cur = new Date();
 		SimpleDateFormat format = new SimpleDateFormat("dd.MM.yy_HH.mm.ss");
 
-		evaluator.setOutputPath("out/" + format.format(cur) + OUTPUT_PATH);
-		evaluator.setUserOutputPath("out/" + format.format(cur) + OUTPUT_USER_PATH);
-		evaluator.setPredictOutputPath("out/" + format.format(cur) + OUTPUT_ITEM_PATH);
+		evaluator.setOutputPath("out/" + format.format(cur) + Settings.OUTPUT_PATH);
+		evaluator.setUserOutputPath("out/" + format.format(cur) + Settings.OUTPUT_USER_PATH);
+		evaluator.setPredictOutputPath("out/" + format.format(cur) + Settings.OUTPUT_ITEM_PATH);
 	}
 
 	public static void main(String algs[]) {
@@ -77,7 +56,7 @@ public class ExperimentRunner {
 
 		addAlgorithms(algs, evaluator);
 
-		ContentAverageDissimilarity.create(DATASET_CONTENT);
+		ContentAverageDissimilarity.create(Settings.DATASET_CONTENT);
 
 		addEvaluationMetrics(evaluator);
 
@@ -111,26 +90,26 @@ public class ExperimentRunner {
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
 		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
-		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
+		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");
 
 		//addMetricsWithParameters(evaluator, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(RANDOM_ITEMS_FOR_CANDIDATES)), RANDOM_ITEMS_FOR_CANDIDATES + "rand");
 	}
 
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, ItemSelector candidates, String prefix) {
-		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(AlgorithmUtil.R_THRESHOLD));
+		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(Settings.R_THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
 		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
-		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, AlgorithmUtil.R_THRESHOLD,
-				AlgorithmUtil.U_THRESHOLD, AlgorithmUtil.D_THRESHOLD, preferenceDomain));
+		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
+		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
+				Settings.U_THRESHOLD, Settings.D_THRESHOLD, domain));
 	}
 
 	private static LongSet getPopItems(int popNum) {
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(DATASET), eventFormat), new PreferenceDomain(MIN, MAX));
+		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));
 		ItemEventDAO idao = dataSource.getItemEventDAO();
 		ScoredItemAccumulator accum = new TopNScoredItemAccumulator(popNum);
 		Cursor<ItemEventCollection<Event>> items = idao.streamEventsByItem();
@@ -152,86 +131,80 @@ public class ExperimentRunner {
 			input = new FileInputStream("config.properties");
 			prop.load(input);
 
-			DATASET = (String) prop.get("dataset");
-			System.out.println("dataset " + DATASET);
+			Settings.DATASET = (String) prop.get("dataset");
+			System.out.println("dataset " + Settings.DATASET);
 
-			DATASET_CONTENT = (String) prop.get("dataset_content");
-			System.out.println("dataset_content " + DATASET_CONTENT);
+			Settings.DATASET_CONTENT = (String) prop.get("dataset_content");
+			System.out.println("dataset_content " + Settings.DATASET_CONTENT);
 
-			MIN = Double.valueOf((String) prop.get("min_rating"));
-			System.out.println("min_rating " + MIN);
+			Settings.MIN = Double.valueOf((String) prop.get("min_rating"));
+			System.out.println("min_rating " + Settings.MIN);
 
-			MAX = Double.valueOf((String) prop.get("max_rating"));
-			System.out.println("max_rating " + MAX);
+			Settings.MAX = Double.valueOf((String) prop.get("max_rating"));
+			System.out.println("max_rating " + Settings.MAX);
 
-			CROSSFOLD_NUMBER = Integer.valueOf((String) prop.get("crossfold"));
-			System.out.println("crossfold " + CROSSFOLD_NUMBER);
+			Settings.CROSSFOLD_NUMBER = Integer.valueOf((String) prop.get("crossfold"));
+			System.out.println("crossfold " + Settings.CROSSFOLD_NUMBER);
 
-			HOLDOUT_NUMBER = Integer.valueOf((String) prop.get("holdout"));
-			System.out.println("holdout " + HOLDOUT_NUMBER);
+			Settings.HOLDOUT_NUMBER = Integer.valueOf((String) prop.get("holdout"));
+			System.out.println("holdout " + Settings.HOLDOUT_NUMBER);
 
-			SHORT_HEAD_END = Integer.valueOf((String) prop.get("short_head_end"));
-			System.out.println("short_head_end " + SHORT_HEAD_END);
+			Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER = Integer.valueOf((String) prop.get("popular_items_number"));
+			System.out.println("popular_items_number " + Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER);
 
-			LONG_TAIL_START = Integer.valueOf((String) prop.get("long_tail_start"));
-			System.out.println("long_tail_start " + LONG_TAIL_START);
+			Settings.RANDOM_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("random_items_candidates"));
+			System.out.println("random_items_candidates " + Settings.RANDOM_ITEMS_FOR_CANDIDATES);
 
-			POPULAR_ITEMS_SERENDIPITY_NUMBER = Integer.valueOf((String) prop.get("popular_items_number"));
-			System.out.println("popular_items_number " + POPULAR_ITEMS_SERENDIPITY_NUMBER);
+			Settings.POPULAR_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("popular_items_candidates"));
+			System.out.println("popular_items_candidates " + Settings.POPULAR_ITEMS_FOR_CANDIDATES);
 
-			RANDOM_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("random_items_candidates"));
-			System.out.println("random_items_candidates " + RANDOM_ITEMS_FOR_CANDIDATES);
+			Settings.TRAIN_TEST_FOLDER_NAME = (String) prop.get("train_folder");
+			System.out.println("train_folder " + Settings.TRAIN_TEST_FOLDER_NAME);
 
-			POPULAR_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("popular_items_candidates"));
-			System.out.println("popular_items_candidates " + POPULAR_ITEMS_FOR_CANDIDATES);
+			Settings.OUTPUT_PATH = (String) prop.get("output");
+			System.out.println("output " + Settings.OUTPUT_PATH);
 
-			TRAIN_TEST_FOLDER_NAME = (String) prop.get("train_folder");
-			System.out.println("train_folder " + TRAIN_TEST_FOLDER_NAME);
+			Settings.OUTPUT_USER_PATH = (String) prop.get("output_user");
+			System.out.println("output_user " + Settings.OUTPUT_USER_PATH);
 
-			OUTPUT_PATH = (String) prop.get("output");
-			System.out.println("output " + OUTPUT_PATH);
+			Settings.OUTPUT_ITEM_PATH = (String) prop.get("outout_item");
+			System.out.println("outout_item " + Settings.OUTPUT_ITEM_PATH);
 
-			OUTPUT_USER_PATH = (String) prop.get("output_user");
-			System.out.println("output_user " + OUTPUT_USER_PATH);
+			Settings.R_THRESHOLD = Double.valueOf((String) prop.get("r_threshold"));
+			System.out.println("r_threshold " + Settings.R_THRESHOLD);
 
-			OUTPUT_ITEM_PATH = (String) prop.get("outout_item");
-			System.out.println("outout_item " + OUTPUT_ITEM_PATH);
+			Settings.D_THRESHOLD = Double.valueOf((String) prop.get("d_threshold"));
+			System.out.println("d_threshold " + Settings.D_THRESHOLD);
 
-			AlgorithmUtil.R_THRESHOLD = Double.valueOf((String) prop.get("r_threshold"));
-			System.out.println("r_threshold " + AlgorithmUtil.R_THRESHOLD);
+			Settings.U_THRESHOLD = Double.valueOf((String) prop.get("u_threshold"));
+			System.out.println("u_threshold " + Settings.U_THRESHOLD);
 
-			AlgorithmUtil.D_THRESHOLD = Double.valueOf((String) prop.get("d_threshold"));
-			System.out.println("d_threshold " + AlgorithmUtil.D_THRESHOLD);
+			Settings.FEATURE_COUNT = Integer.valueOf((String) prop.get("feature_count"));
+			System.out.println("feature_count " + Settings.FEATURE_COUNT);
 
-			AlgorithmUtil.U_THRESHOLD = Double.valueOf((String) prop.get("u_threshold"));
-			System.out.println("u_threshold " + AlgorithmUtil.U_THRESHOLD);
+			Settings.ITERATION_COUNT = Integer.valueOf((String) prop.get("iteration_count"));
+			System.out.println("iteration_count " + Settings.ITERATION_COUNT);
 
-			AlgorithmUtil.FEATURE_COUNT = Integer.valueOf((String) prop.get("feature_count"));
-			System.out.println("feature_count " + AlgorithmUtil.FEATURE_COUNT);
+			Settings.LEARNING_RATE = Double.valueOf((String) prop.get("learning_rate"));
+			System.out.println("learning_rate " + Settings.LEARNING_RATE);
 
-			AlgorithmUtil.ITERATION_COUNT = Integer.valueOf((String) prop.get("iteration_count"));
-			System.out.println("iteration_count " + AlgorithmUtil.ITERATION_COUNT);
+			Settings.REGULARIZATION_TERM = Double.valueOf((String) prop.get("regularization_term"));
+			System.out.println("regularization_term " + Settings.REGULARIZATION_TERM);
 
-			AlgorithmUtil.LEARNING_RATE = Double.valueOf((String) prop.get("learning_rate"));
-			System.out.println("learning_rate " + AlgorithmUtil.LEARNING_RATE);
+			Settings.ZHENG_LEARNING_RATE = Double.valueOf((String) prop.get("zheng_learning_rate"));
+			System.out.println("zheng_learning_rate " + Settings.ZHENG_LEARNING_RATE);
 
-			AlgorithmUtil.REGULARIZATION_TERM = Double.valueOf((String) prop.get("regularization_term"));
-			System.out.println("regularization_term " + AlgorithmUtil.REGULARIZATION_TERM);
+			Settings.ZHENG_REGULARIZATION_TERM = Double.valueOf((String) prop.get("zheng_regularization_term"));
+			System.out.println("zheng_regularization_term " + Settings.ZHENG_REGULARIZATION_TERM);
 
-			AlgorithmUtil.ZHENG_LEARNING_RATE = Double.valueOf((String) prop.get("zheng_learning_rate"));
-			System.out.println("zheng_learning_rate " + AlgorithmUtil.ZHENG_LEARNING_RATE);
+			Settings.ALPHA = Double.valueOf((String) prop.get("alpha"));
+			System.out.println("alpha " + Settings.ALPHA);
 
-			AlgorithmUtil.ZHENG_REGULARIZATION_TERM = Double.valueOf((String) prop.get("zheng_regularization_term"));
-			System.out.println("zheng_regularization_term " + AlgorithmUtil.ZHENG_REGULARIZATION_TERM);
+			Settings.LU_LEARNING_RATE = Double.valueOf((String) prop.get("lu_learning_rate"));
+			System.out.println("lu_learning_rate " + Settings.LU_LEARNING_RATE);
 
-			AlgorithmUtil.ALPHA = Double.valueOf((String) prop.get("alpha"));
-			System.out.println("alpha " + AlgorithmUtil.ALPHA);
-
-			AlgorithmUtil.LU_LEARNING_RATE = Double.valueOf((String) prop.get("lu_learning_rate"));
-			System.out.println("lu_learning_rate " + AlgorithmUtil.LU_LEARNING_RATE);
-
-			AlgorithmUtil.LU_REGULARIZATION_TERM = Double.valueOf((String) prop.get("lu_regularization_term"));
-			System.out.println("lu_regularization_term " + AlgorithmUtil.LU_REGULARIZATION_TERM);
+			Settings.LU_REGULARIZATION_TERM = Double.valueOf((String) prop.get("lu_regularization_term"));
+			System.out.println("lu_regularization_term " + Settings.LU_REGULARIZATION_TERM);
 
 		} catch (IOException io) {
 			io.printStackTrace();

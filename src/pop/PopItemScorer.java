@@ -4,6 +4,7 @@ import org.grouplens.lenskit.basic.AbstractItemScorer;
 import org.grouplens.lenskit.data.dao.UserEventDAO;
 import org.grouplens.lenskit.data.event.Rating;
 import org.grouplens.lenskit.data.history.UserHistory;
+import org.grouplens.lenskit.eval.data.traintest.TTDataSet;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.VectorEntry;
 
@@ -25,7 +26,7 @@ public class PopItemScorer extends AbstractItemScorer {
 	public void score(long user, @Nonnull MutableSparseVector scores) {
 		UserHistory<Rating> history = dao.getEventsForUser(user, Rating.class);
 		List<Long> recommendations = model.getItemList();
-		for(VectorEntry e : scores.view(VectorEntry.State.EITHER)){
+		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
 			int score = recommendations.indexOf(e.getKey());
 			scores.set(e, score);
 		}

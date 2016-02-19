@@ -17,6 +17,7 @@ import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.VectorEntry;
 import pop.PopModel;
 import util.AlgorithmUtil;
+import util.ContentAverageDissimilarity;
 import util.ContentUtil;
 
 import javax.annotation.Nonnull;
@@ -33,6 +34,7 @@ public class LCItemScorer extends AbstractItemScorer {
 	private final double unpopWeight;
 	private final double relevanceWeight;
 	private final PreferenceDomain domain;
+	private final Map<Long, SparseVector> itemContentMap;
 
 	@Inject
 	public LCItemScorer(PopModel model, @RatingPredictor ItemScorer itemScorer,
@@ -46,6 +48,8 @@ public class LCItemScorer extends AbstractItemScorer {
 		unpopWeight = unpop;
 		relevanceWeight = relevance;
 		this.domain = domain;
+		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
+		itemContentMap = contentAverageDissimilarity.getItemContentMap();
 	}
 
 	@Override
@@ -62,6 +66,7 @@ public class LCItemScorer extends AbstractItemScorer {
 			double unpop = unpopNormalizer.norm(unpopMap.get(e.getKey()));
 			double rating = ratingNormalizer.norm(ratings.get(e.getKey()));
 			double total = unpopWeight * unpop + relevanceWeight * rating / domain.getMaximum() + dissimilarityWeight * dissim;
+
 			scores.set(e, total);
 		}
 	}
@@ -109,10 +114,10 @@ public class LCItemScorer extends AbstractItemScorer {
 
 	private double getDissim(long userId, long itemId) {
 		Collection<IndexedPreference> prefs = snapshot.getUserRatings(userId);
-		SparseVector itemVec = AlgorithmUtil.itemContentMap.get(itemId);
+		SparseVector itemVec = itemContentMap.get(itemId);
 		double dissim = 0.0;
 		for (IndexedPreference p : prefs) {
-			SparseVector ratedItemVec = AlgorithmUtil.itemContentMap.get(p.getItemId());
+			SparseVector ratedItemVec = itemContentMap.get(p.getItemId());
 			dissim += 1.0 - ContentUtil.getCosine(ratedItemVec, itemVec);
 		}
 		return dissim / prefs.size();

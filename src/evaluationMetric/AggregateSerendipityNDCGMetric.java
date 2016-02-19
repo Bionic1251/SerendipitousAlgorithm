@@ -167,9 +167,6 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		if (recommendations == null) {
 			return null;
 		}
-		for (ScoredId score : recommendations) {
-			writer.println(user.getUserId() + "," + score.getId() + "," + score.getScore());
-		}
 		double ndcg1 = measureUser(user, context1, recommendations, 1);
 		double ndcg5 = measureUser(user, context5, recommendations, 5);
 		double ndcg10 = measureUser(user, context10, recommendations, 10);
@@ -220,16 +217,8 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		return ids;
 	}
 
-	private PrintWriter writer;
-
 	@Override
 	public MeanAccumulator createContext(Attributed algo, TTDataSet ds, Recommender rec) {
-		File file = new File("recs/" + rec.getItemScorer().getClass() + " " + ds.getName() + ".csv");
-		try {
-			writer = new PrintWriter(file);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		context1 = new MeanAccumulator();
 		context5 = new MeanAccumulator();
 		context10 = new MeanAccumulator();
@@ -297,7 +286,6 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 
 	@Override
 	protected AggregateResult getTypedResults(MeanAccumulator context) {
-		writer.close();
 		return new AggregateResult(context1.getMean(), context5.getMean(), context10.getMean(), context15.getMean(), context20.getMean(), context25.getMean(), context30.getMean());
 	}
 

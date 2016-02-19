@@ -19,8 +19,9 @@ public class AdaItemScorer extends AbstractItemScorer {
 
 	@Override
 	public void score(long user, @Nonnull MutableSparseVector scores) {
-		for(VectorEntry e : scores.view(VectorEntry.State.EITHER)){
-			scores.set(e, adaModel.getRankById(user, e.getKey()));
+		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
+			double score = adaModel.getRankById(user, e.getKey());
+			scores.set(e, score);
 		}
 	}
 }
