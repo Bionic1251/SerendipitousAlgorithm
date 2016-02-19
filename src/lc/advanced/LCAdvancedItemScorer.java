@@ -9,7 +9,6 @@ import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.basic.AbstractItemScorer;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
@@ -18,6 +17,7 @@ import pop.PopModel;
 import util.AlgorithmUtil;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
+import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -30,16 +30,14 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 	private final ItemScorer itemScorer;
 	private final PreferenceSnapshot snapshot;
 	private final LCModel lcModel;
-	private final PreferenceDomain domain;
 	private final Map<Long, SparseVector> itemContentMap;
 
 	@Inject
 	public LCAdvancedItemScorer(PopModel model, @RatingPredictor ItemScorer itemScorer,
-								@Transient @Nonnull PreferenceSnapshot snapshot, PreferenceDomain domain, LCModel lcModel) {
+								@Transient @Nonnull PreferenceSnapshot snapshot, LCModel lcModel) {
 		this.model = model;
 		this.itemScorer = itemScorer;
 		this.snapshot = snapshot;
-		this.domain = domain;
 		this.lcModel = lcModel;
 		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
 		itemContentMap = dissimilarity.getItemContentMap();
@@ -58,7 +56,7 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 			double dissim = dissimNormalizer.norm(dissimMap.get(e.getKey()));
 			double unpop = unpopNormalizer.norm(unpopMap.get(e.getKey()));
 			double rating = ratingNormalizer.norm(ratings.get(e.getKey()));
-			double total = lcModel.getUw() * unpop + lcModel.getRw() * rating / domain.getMaximum() + lcModel.getDw() * dissim;
+			double total = lcModel.getUw() * unpop + lcModel.getRw() * rating / Settings.MAX + lcModel.getDw() * dissim;
 			scores.set(e, total);
 		}
 	}

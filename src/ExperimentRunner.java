@@ -5,7 +5,6 @@ import org.grouplens.lenskit.cursors.Cursor;
 import org.grouplens.lenskit.data.dao.ItemEventDAO;
 import org.grouplens.lenskit.data.event.Event;
 import org.grouplens.lenskit.data.history.ItemEventCollection;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.source.DataSource;
 import org.grouplens.lenskit.data.source.GenericDataSource;
 import org.grouplens.lenskit.data.text.DelimitedColumnEventFormat;
@@ -29,12 +28,10 @@ import java.util.Properties;
 public class ExperimentRunner {
 
 	private static DelimitedColumnEventFormat eventFormat;
-	private static PreferenceDomain domain;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
-		domain = new PreferenceDomain(Settings.MIN, Settings.MAX);
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));//, domain);
+		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));
 		CrossfoldTask task = new CrossfoldTask(Settings.TRAIN_TEST_FOLDER_NAME);
 		task.setHoldout(Settings.HOLDOUT_NUMBER);
 		task.setPartitions(Settings.CROSSFOLD_NUMBER);
@@ -105,7 +102,7 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
-				Settings.U_THRESHOLD, Settings.D_THRESHOLD, domain));
+				Settings.U_THRESHOLD, Settings.D_THRESHOLD));
 	}
 
 	private static LongSet getPopItems(int popNum) {

@@ -29,7 +29,6 @@ import org.grouplens.lenskit.data.dao.packed.RatingSnapshotDAO;
 import org.grouplens.lenskit.data.event.Event;
 import org.grouplens.lenskit.data.history.RatingVectorUserHistorySummarizer;
 import org.grouplens.lenskit.data.history.UserHistory;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.eval.Attributed;
 import org.grouplens.lenskit.eval.data.traintest.TTDataSet;
 import org.grouplens.lenskit.eval.metrics.AbstractMetric;
@@ -47,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
+import util.Settings;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -69,7 +69,6 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 	private final double relevanceTheshold;
 	private final double unpopTheshold;
 	private final double dissimTheshold;
-	private final PreferenceDomain domain;
 
 	private MeanAccumulator context1;
 	private MeanAccumulator context5;
@@ -88,7 +87,7 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 	 * @param exclude    The exclude selector.
 	 */
 	public AggregateSerendipityNDCGMetric(String pre, String sfx, ItemSelector candidates, ItemSelector exclude,
-										  double threshold, double unpopThreshold, double dissThreshold, PreferenceDomain domain) {
+										  double threshold, double unpopThreshold, double dissThreshold) {
 		super(AggregateResult.class, AggregateResult.class);
 		suffix = sfx;
 		prefix = pre;
@@ -99,7 +98,6 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		relevanceTheshold = threshold;
 		this.unpopTheshold = unpopThreshold;
 		dissimTheshold = dissThreshold;
-		this.domain = domain;
 	}
 
 
@@ -136,7 +134,7 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		if (dissimilarity < dissimTheshold) {
 			return 0.0;
 		}
-		double value = dissimilarity + unpop + rating / domain.getMaximum();
+		double value = dissimilarity + unpop + rating / Settings.MAX;
 		return value;
 	}
 

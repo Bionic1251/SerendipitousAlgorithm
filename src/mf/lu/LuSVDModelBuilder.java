@@ -20,6 +20,7 @@ import org.grouplens.lenskit.iterative.TrainingLoopController;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
+import util.Settings;
 import util.Util;
 
 import javax.annotation.Nonnull;
@@ -49,14 +50,13 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 	public LuSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 							 @FeatureCount int featureCount,
 							 @InitialFeatureValue double initVal,
-							 @R_Threshold double threshold, @Nullable PreferenceDomain dom,
-							 @Alpha double alpha, StoppingCondition stop,
+							 @R_Threshold double threshold, @Alpha double alpha, StoppingCondition stop,
 							 @UpdateRule LuFunkSVDUpdateRule rule, @NormMult double mult) {
- 		this.featureCount = featureCount;
+		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
 		this.threshold = threshold;
-		domain = dom;
+		domain = new PreferenceDomain(Settings.MIN, Settings.MAX);
 		this.alpha = alpha;
 		stoppingCondition = stop;
 		this.rule = rule;

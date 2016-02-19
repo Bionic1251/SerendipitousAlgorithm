@@ -12,7 +12,6 @@ import org.grouplens.lenskit.data.event.Rating;
 import org.grouplens.lenskit.data.event.Ratings;
 import org.grouplens.lenskit.data.history.History;
 import org.grouplens.lenskit.data.history.UserHistory;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.mf.svd.BiasedMFKernel;
 import org.grouplens.lenskit.mf.svd.DomainClampingKernel;
 import org.grouplens.lenskit.mf.svd.DotProductKernel;

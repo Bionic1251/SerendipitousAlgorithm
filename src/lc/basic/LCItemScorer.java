@@ -10,7 +10,6 @@ import org.grouplens.lenskit.basic.AbstractItemScorer;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.dao.UserEventDAO;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
@@ -19,6 +18,7 @@ import pop.PopModel;
 import util.AlgorithmUtil;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
+import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -33,13 +33,12 @@ public class LCItemScorer extends AbstractItemScorer {
 	private final double dissimilarityWeight;
 	private final double unpopWeight;
 	private final double relevanceWeight;
-	private final PreferenceDomain domain;
 	private final Map<Long, SparseVector> itemContentMap;
 
 	@Inject
 	public LCItemScorer(PopModel model, @RatingPredictor ItemScorer itemScorer,
 						@Transient @Nonnull PreferenceSnapshot snapshot, @DissimilarityWeight double dissimilarity,
-						@UnpopWeight double unpop, @RelevanceWeight double relevance, PreferenceDomain domain) {
+						@UnpopWeight double unpop, @RelevanceWeight double relevance) {
 		System.out.println("LC R " + relevance + "; D " + dissimilarity + "; U " + unpop);
 		this.model = model;
 		this.itemScorer = itemScorer;
@@ -47,7 +46,6 @@ public class LCItemScorer extends AbstractItemScorer {
 		dissimilarityWeight = dissimilarity;
 		unpopWeight = unpop;
 		relevanceWeight = relevance;
-		this.domain = domain;
 		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
 		itemContentMap = contentAverageDissimilarity.getItemContentMap();
 	}
@@ -65,7 +63,7 @@ public class LCItemScorer extends AbstractItemScorer {
 			double dissim = dissimNormalizer.norm(dissimMap.get(e.getKey()));
 			double unpop = unpopNormalizer.norm(unpopMap.get(e.getKey()));
 			double rating = ratingNormalizer.norm(ratings.get(e.getKey()));
-			double total = unpopWeight * unpop + relevanceWeight * rating / domain.getMaximum() + dissimilarityWeight * dissim;
+			double total = unpopWeight * unpop + relevanceWeight * rating / Settings.MAX + dissimilarityWeight * dissim;
 
 			scores.set(e, total);
 		}

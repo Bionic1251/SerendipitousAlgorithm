@@ -6,13 +6,13 @@ import annotation.U_Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.SparseVector;
 import pop.PopModel;
 import util.AlgorithmUtil;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
+import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -27,7 +27,6 @@ public class LCModelBuilder implements Provider<LCModel> {
 	private final double dThreshold;
 	private final double uThreshold;
 	private Map<Long, SparseVector> userItemDissimilarityMap;
-	private final PreferenceDomain domain;
 
 	private final double learningRate = 0.0001;
 	private final double regularizationTerm = 0.001;
@@ -39,8 +38,7 @@ public class LCModelBuilder implements Provider<LCModel> {
 
 	@Inject
 	public LCModelBuilder(PopModel popModel, @Transient @Nonnull PreferenceSnapshot snapshot,
-						  @R_Threshold double rThreshold, @D_Threshold double dThreshold, @U_Threshold double uThreshold,
-						  PreferenceDomain domain) {
+						  @R_Threshold double rThreshold, @D_Threshold double dThreshold, @U_Threshold double uThreshold) {
 		this.popModel = popModel;
 		this.snapshot = snapshot;
 		this.rThreshold = rThreshold;
@@ -48,7 +46,6 @@ public class LCModelBuilder implements Provider<LCModel> {
 		this.uThreshold = uThreshold;
 		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
 		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
-		this.domain = domain;
 	}
 
 	private void trainParameters() {
@@ -79,7 +76,7 @@ public class LCModelBuilder implements Provider<LCModel> {
 	}
 
 	private void changeParameters(Triple serTriple, Triple unserTriple) {
-		double derR = (serTriple.rating - unserTriple.rating) / domain.getMaximum();
+		double derR = (serTriple.rating - unserTriple.rating) / Settings.MAX;
 		double derD = serTriple.dissimilarity - unserTriple.dissimilarity;
 		double derU = serTriple.unpopularity - unserTriple.unpopularity;
 		wr += learningRate * (derR - regularizationTerm * wr);
@@ -88,7 +85,7 @@ public class LCModelBuilder implements Provider<LCModel> {
 	}
 
 	private double getPredictedSerendipity(Triple triple) {
-		double result = wr * triple.rating / domain.getMaximum() + wd * triple.dissimilarity + wu * triple.unpopularity;
+		double result = wr * triple.rating / Settings.MAX + wd * triple.dissimilarity + wu * triple.unpopularity;
 		return result;
 	}
 
@@ -102,7 +99,7 @@ public class LCModelBuilder implements Provider<LCModel> {
 		if (triple.unpopularity <= uThreshold) {
 			return 0;
 		}
-		double result = triple.rating / domain.getMaximum() + triple.dissimilarity + triple.unpopularity;
+		double result = triple.rating / Settings.MAX + triple.dissimilarity + triple.unpopularity;
 		return result;
 	}
 

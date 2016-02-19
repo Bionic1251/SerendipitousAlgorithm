@@ -8,7 +8,6 @@ import mikera.vectorz.AVector;
 import mikera.vectorz.Vector;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
-import org.grouplens.lenskit.data.pref.PreferenceDomain;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.iterative.LearningRate;
 import org.grouplens.lenskit.iterative.RegularizationTerm;
@@ -35,7 +34,6 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	protected final int featureCount;
 	protected final double learningRate;
 	protected final double regularization;
-	private final PreferenceDomain domain;
 	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
@@ -45,13 +43,11 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	@Inject
 	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								@FeatureCount int featureCount,
-								@InitialFeatureValue double initVal,
-								@Nullable PreferenceDomain dom, @LearningRate double lrate,
+								@InitialFeatureValue double initVal, @LearningRate double lrate,
 								@RegularizationTerm double reg, StoppingCondition stop) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
-		domain = dom;
 		learningRate = lrate;
 		regularization = reg;
 		stoppingCondition = stop;
