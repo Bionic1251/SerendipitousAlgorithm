@@ -315,7 +315,6 @@ public class AlgorithmUtil {
 		return pureSVD;
 	}
 
-	// POP POPReverse
 	public static Map<String, LenskitConfiguration> getMap() {
 		Map<String, LenskitConfiguration> configurationMap = new HashMap<String, LenskitConfiguration>();
 		//Funk
