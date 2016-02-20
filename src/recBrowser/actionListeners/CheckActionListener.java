@@ -2,6 +2,7 @@ package recBrowser.actionListeners;
 
 import recBrowser.BrowserSettings;
 import recBrowser.InitialRecReader;
+import util.ContentAverageDissimilarity;
 import util.Settings;
 
 import javax.swing.*;
@@ -23,5 +24,6 @@ public class CheckActionListener implements ActionListener {
 		recReader.readFile(BrowserSettings.outFilePath);
 		algList.setListData(recReader.getAlgSet().toArray());
 		userList.setListData(recReader.getUserSet().toArray());
+		ContentAverageDissimilarity.create(BrowserSettings.contentFilePath);
 	}
 }
