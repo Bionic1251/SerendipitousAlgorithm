@@ -85,9 +85,9 @@ public class ExperimentRunner {
 	}
 
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
-		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
+		//addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
-		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");

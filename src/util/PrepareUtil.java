@@ -1,12 +1,198 @@
 package util;
 
+import org.grouplens.lenskit.vectors.SparseVector;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.*;
 
 public class PrepareUtil {
-	public static void printStatistics(String path) {
+
+	/*public static void generateOnePlusRandom(String ratingPath, int shortHead, int seed) {
+		Map<String, Integer> popMap = getPopMap(ratingPath);
+		Set<String> shortSet = getShortHeadItemIds(popMap, shortHead);
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			PrintWriter datasetWriter = new PrintWriter(new File("ratings.dat"));
+			PrintWriter trainWriter = new PrintWriter(new File("train.csv"));
+			PrintWriter testWriter = new PrintWriter(new File("test.csv"));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String itemId = getItemId(line);
+					if (shortSet.contains(itemId)) {
+						line = reader.readLine();
+						continue;
+					}
+					String newUserId = getUserId(line);
+					*//*if (!newUserId.equals(userId)) {
+						userId = newUserId;
+					}
+					line = reader.readLine();*//*
+				}
+			} finally {
+				reader.close();
+				datasetWriter.close();
+				trainWriter.close();
+				testWriter.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static Set<String> getShortHeadItemIds(Map<String, Integer> popMap, int shortHead) {
+		Set<String> shortSet = new HashSet<String>();
+		List<Integer> freqList = new ArrayList<Integer>(popMap.values());
+		Collections.sort(freqList);
+		Collections.reverse(freqList);
+		Integer smallestFreq = freqList.get(shortHead);
+		for (Map.Entry<String, Integer> entry : popMap.entrySet()) {
+			if (entry.getValue() >= smallestFreq) {
+				shortSet.add(entry.getKey());
+				if (shortSet.size() >= shortHead) {
+					break;
+				}
+			}
+		}
+		return shortSet;
+	}*/
+
+	public static void printUnpopularityRating(String ratingPath) {
+		Map<String, Integer> popMap = getPopMap(ratingPath);
+		int max = getMax(popMap);
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			PrintWriter writer = new PrintWriter(new File("unpop_rating.csv"));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String itemId = getItemId(line);
+					int pop = popMap.get(itemId);
+					double unpop = 1.0 - (double) pop / (double) max;
+					String rating = getRating(line);
+					writer.println(unpop + "," + rating);
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+				writer.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static int getMax(Map<String, Integer> popMap) {
+		int max = Integer.MIN_VALUE;
+		for (Integer val : popMap.values()) {
+			max = Math.max(max, val);
+		}
+		return max;
+	}
+
+	private static Map<String, Integer> getPopMap(String ratingPath) {
+		Map<String, Integer> popMap = new HashMap<String, Integer>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String itemId = getItemId(line);
+					int num = 0;
+					if (popMap.containsKey(itemId)) {
+						num = popMap.get(itemId);
+					}
+					num++;
+					popMap.put(itemId, num);
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return popMap;
+	}
+
+	public static void printDissimilarityRating(String ratingPath, String contentPath) {
+		int count = 0;
+		ContentAverageDissimilarity.create(contentPath);
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			PrintWriter writer = new PrintWriter(new File("dissim_rating.csv"));
+			try {
+				Map<Long, Double> itemRatingMap = new HashMap<Long, Double>();
+				String userId = "";
+				String line = reader.readLine();
+				while (line != null) {
+					count++;
+					if (count % 1000 == 0) {
+						System.out.println("Processed " + count);
+					}
+					String newUserId = getUserId(line);
+					if (!newUserId.equals(userId)) {
+						printValues(itemRatingMap, writer);
+						itemRatingMap = new HashMap<Long, Double>();
+						userId = newUserId;
+					}
+					addRating(line, itemRatingMap);
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+				writer.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void printValues(Map<Long, Double> itemRatingMap, PrintWriter writer) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> itemContentMap = dissimilarity.getItemContentMap();
+		for (Map.Entry<Long, Double> item : itemRatingMap.entrySet()) {
+			SparseVector contentItem = itemContentMap.get(item.getKey());
+			double sum = 0;
+			for (Map.Entry<Long, Double> tempItem : itemRatingMap.entrySet()) {
+				if (item.getKey().equals(tempItem.getKey())) {
+					continue;
+				}
+				SparseVector tempContentItem = itemContentMap.get(tempItem.getKey());
+				double sim = ContentUtil.getCosine(tempContentItem, contentItem);
+				double dissim = 1 - sim;
+				sum += dissim;
+			}
+			double res = sum / (double) (itemRatingMap.size() - 1);
+			writer.println(res + "," + item.getValue());
+		}
+	}
+
+	private static String getRating(String line) {
+		String[] brokenLine = line.split("\t");
+		return brokenLine[2];
+	}
+
+	private static String getItemId(String line) {
+		String[] brokenLine = line.split("\t");
+		return brokenLine[1];
+	}
+
+	private static String getUserId(String line) {
+		String[] brokenLine = line.split("\t");
+		return brokenLine[0];
+	}
+
+	private static void addRating(String line, Map<Long, Double> itemRating) {
+		String[] brokenLine = line.split("\t");
+		Long itemId = Long.valueOf(brokenLine[1]);
+		Double rating = Double.valueOf(brokenLine[2]);
+		itemRating.put(itemId, rating);
+	}
+
+	public static void printUserItemRatingNumber(String path) {
 		try {
 			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
 			try {
