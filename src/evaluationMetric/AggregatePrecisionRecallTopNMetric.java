@@ -28,6 +28,7 @@ import org.grouplens.lenskit.eval.metrics.AbstractMetric;
 import org.grouplens.lenskit.eval.metrics.ResultColumn;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
+import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.metrics.topn.TopNMetricBuilder;
 import org.grouplens.lenskit.eval.traintest.TestUser;
 import org.grouplens.lenskit.scored.ScoredId;
@@ -110,6 +111,13 @@ public class AggregatePrecisionRecallTopNMetric extends AbstractMetric<Aggregate
 	public AggregateResult doMeasureUser(TestUser user, Context context) {
 		List<ScoredId> recs = user.getRecommendations(30, candidates, exclude);
 		if (recs == null || recs.isEmpty()) {
+			context1.addUser(0,0);
+			context5.addUser(0,0);
+			context10.addUser(0,0);
+			context15.addUser(0,0);
+			context20.addUser(0,0);
+			context25.addUser(0,0);
+			context30.addUser(0,0);
 			logger.warn("no recommendations for user {}", user.getUserId());
 			return new AggregateResult(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 		}

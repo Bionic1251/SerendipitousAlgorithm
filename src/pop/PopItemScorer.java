@@ -14,17 +14,14 @@ import java.util.List;
 
 public class PopItemScorer extends AbstractItemScorer {
 	private PopModel model;
-	private UserEventDAO dao;
 
 	@Inject
-	public PopItemScorer(PopModel model, UserEventDAO dao) {
-		this.dao = dao;
+	public PopItemScorer(PopModel model) {
 		this.model = model;
 	}
 
 	@Override
 	public void score(long user, @Nonnull MutableSparseVector scores) {
-		UserHistory<Rating> history = dao.getEventsForUser(user, Rating.class);
 		List<Long> recommendations = model.getItemList();
 		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
 			int score = recommendations.indexOf(e.getKey());

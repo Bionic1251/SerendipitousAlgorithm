@@ -13,6 +13,8 @@ import org.grouplens.lenskit.data.text.TextEventDAO;
 import org.grouplens.lenskit.eval.data.crossfold.CrossfoldTask;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
+import org.grouplens.lenskit.eval.metrics.topn.NDCGTopNMetric;
+import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
@@ -85,9 +87,9 @@ public class ExperimentRunner {
 	}
 
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
-		//addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
+		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");
