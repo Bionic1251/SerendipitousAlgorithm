@@ -13,8 +13,6 @@ import org.grouplens.lenskit.data.text.TextEventDAO;
 import org.grouplens.lenskit.eval.data.crossfold.CrossfoldTask;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
-import org.grouplens.lenskit.eval.metrics.topn.NDCGTopNMetric;
-import org.grouplens.lenskit.eval.metrics.topn.PrecisionRecallTopNMetric;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
@@ -87,9 +85,11 @@ public class ExperimentRunner {
 	}
 
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
-		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
+		addOnePlusRandomMetric(evaluator);
 
-		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		//addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
+
+		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");
@@ -105,6 +105,15 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
 				Settings.U_THRESHOLD, Settings.D_THRESHOLD));
+	}
+
+	private static void addOnePlusRandomMetric(SimpleEvaluator evaluator) {
+		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThanOrEqualTo(5.0));
+		ItemSelector exclude = ItemSelectors.trainingItems();
+		ItemSelector testTrain = ItemSelectors.union(ItemSelectors.trainingItems(), ItemSelectors.testItems());
+		ItemSelector randomItems = ItemSelectors.randomSubset(ItemSelectors.setDifference(ItemSelectors.allItems(), testTrain), 1000);
+		ItemSelector randCandidates = ItemSelectors.union(randomItems, ItemSelectors.testItems());
+		evaluator.addMetric(new AggregateOPRMetric(randCandidates, exclude, threshold));
 	}
 
 	private static LongSet getPopItems(int popNum) {
