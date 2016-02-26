@@ -190,8 +190,14 @@ public class ExperimentRunner {
 			Settings.FEATURE_COUNT = Integer.valueOf((String) prop.get("feature_count"));
 			System.out.println("feature_count " + Settings.FEATURE_COUNT);
 
-			Settings.ITERATION_COUNT = Integer.valueOf((String) prop.get("iteration_count"));
-			System.out.println("iteration_count " + Settings.ITERATION_COUNT);
+			Settings.ITERATION_COUNT_SVD = Integer.valueOf((String) prop.get("iteration_count_svd"));
+			System.out.println("iteration_count_svd " + Settings.ITERATION_COUNT_SVD);
+
+			Settings.ITERATION_COUNT_PURE_SVD = Integer.valueOf((String) prop.get("iteration_count_pure_svd"));
+			System.out.println("iteration_count_pure_svd " + Settings.ITERATION_COUNT_PURE_SVD);
+
+			Settings.ITERATION_COUNT_SPR = Integer.valueOf((String) prop.get("iteration_count_spr"));
+			System.out.println("iteration_count_spr " + Settings.ITERATION_COUNT_SPR);
 
 			Settings.LEARNING_RATE = Double.valueOf((String) prop.get("learning_rate"));
 			System.out.println("learning_rate " + Settings.LEARNING_RATE);

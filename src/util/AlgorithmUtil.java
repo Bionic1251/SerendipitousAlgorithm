@@ -60,7 +60,7 @@ public class AlgorithmUtil {
 		adaSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		adaSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		adaSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		adaSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
@@ -76,7 +76,7 @@ public class AlgorithmUtil {
 		adaSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		adaSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		adaSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		adaSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
@@ -91,7 +91,7 @@ public class AlgorithmUtil {
 		zhengFunkSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		zhengFunkSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		zhengFunkSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		zhengFunkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		zhengFunkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
 		zhengFunkSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		zhengFunkSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		return zhengFunkSVD;
@@ -105,7 +105,7 @@ public class AlgorithmUtil {
 		zhengSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		zhengSVD.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
 		zhengSVD.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
-		zhengSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		zhengSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
 		zhengSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		zhengSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
 		return zhengSVD;
@@ -124,7 +124,7 @@ public class AlgorithmUtil {
 		svd.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		svd.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		svd.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		svd.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		svd.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		return svd;
 	}
 
@@ -134,7 +134,7 @@ public class AlgorithmUtil {
 		luSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		luSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		luSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
-		luSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		luSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SPR);
 		luSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		luSVD.set(Alpha.class).to(Settings.ALPHA);
 		return luSVD;
@@ -182,7 +182,7 @@ public class AlgorithmUtil {
 		funkSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		funkSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		funkSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		funkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		funkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SPR);
 		funkSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		funkSVD.set(Alpha.class).to(Settings.ALPHA);
 		return funkSVD;
@@ -208,7 +208,7 @@ public class AlgorithmUtil {
 		funkSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		funkSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		funkSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		funkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		funkSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		return funkSVD;
 	}
 
@@ -235,7 +235,7 @@ public class AlgorithmUtil {
 		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		return alg;
 	}
 
@@ -296,7 +296,7 @@ public class AlgorithmUtil {
 		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
-		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
 		alg.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		alg.set(D_Threshold.class).to(Settings.D_THRESHOLD);
 		alg.set(U_Threshold.class).to(Settings.U_THRESHOLD);
@@ -311,7 +311,7 @@ public class AlgorithmUtil {
 		pureSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		pureSVD.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
 		pureSVD.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
-		pureSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT);
+		pureSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
 		return pureSVD;
 	}
 

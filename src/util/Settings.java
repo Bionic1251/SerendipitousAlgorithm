@@ -20,7 +20,9 @@ public class Settings {
 	public static double D_THRESHOLD;
 	public static double U_THRESHOLD;
 	public static double ALPHA;
-	public static int ITERATION_COUNT;
+	public static int ITERATION_COUNT_SVD;
+	public static int ITERATION_COUNT_SPR;
+	public static int ITERATION_COUNT_PURE_SVD;
 	public static int FEATURE_COUNT;
 	public static double LEARNING_RATE;
 	public static double REGULARIZATION_TERM;
