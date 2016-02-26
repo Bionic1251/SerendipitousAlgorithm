@@ -8,6 +8,7 @@ public class PreparationRunner {
 		//PrepareUtil.prepareContentYahooDataset("D:\\bigdata\\Yahoo Movies\\movie_db_yoda");
 		//PrepareUtil.printUserItemRatingNumber("ml/big/ratings.dat");
 		//PrepareUtil.printDissimilarityRating("dataset/ml/small/ratings.dat", "dataset/ml/small/content.dat");
-		PrepareUtil.printUnpopularityRating("dataset/ml/small/ratings.dat");
+		//PrepareUtil.printUnpopularityRating("dataset/ml/small/ratings.dat");
+		PrepareUtil.generateUnpopDataset("dataset/ml/small/ratings.dat", 22);
 	}
 }

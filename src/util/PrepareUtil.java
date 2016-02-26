@@ -9,33 +9,29 @@ import java.util.*;
 
 public class PrepareUtil {
 
-	/*public static void generateOnePlusRandom(String ratingPath, int shortHead, int seed) {
+	public static void generateUnpopDataset(String ratingPath, int shortHead) {
 		Map<String, Integer> popMap = getPopMap(ratingPath);
 		Set<String> shortSet = getShortHeadItemIds(popMap, shortHead);
 		try {
 			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
 			PrintWriter datasetWriter = new PrintWriter(new File("ratings.dat"));
-			PrintWriter trainWriter = new PrintWriter(new File("train.csv"));
-			PrintWriter testWriter = new PrintWriter(new File("test.csv"));
 			try {
+				int i = 0;
 				String line = reader.readLine();
 				while (line != null) {
+					i++;
+					if (i % 100 == 0) {
+						System.out.println(i + " processed");
+					}
 					String itemId = getItemId(line);
-					if (shortSet.contains(itemId)) {
-						line = reader.readLine();
-						continue;
+					if (!shortSet.contains(itemId)) {
+						datasetWriter.println(line);
 					}
-					String newUserId = getUserId(line);
-					*//*if (!newUserId.equals(userId)) {
-						userId = newUserId;
-					}
-					line = reader.readLine();*//*
+					line = reader.readLine();
 				}
 			} finally {
 				reader.close();
 				datasetWriter.close();
-				trainWriter.close();
-				testWriter.close();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -57,7 +53,7 @@ public class PrepareUtil {
 			}
 		}
 		return shortSet;
-	}*/
+	}
 
 	public static void printUnpopularityRating(String ratingPath) {
 		Map<String, Integer> popMap = getPopMap(ratingPath);

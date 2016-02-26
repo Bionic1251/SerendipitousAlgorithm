@@ -85,9 +85,9 @@ public class ExperimentRunner {
 	}
 
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
-		addOnePlusRandomMetric(evaluator);
+		//addOnePlusRandomMetric(evaluator);
 
-		//addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
+		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
 		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
