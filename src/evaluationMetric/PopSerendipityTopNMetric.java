@@ -51,6 +51,7 @@ public class PopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, Po
 	protected PopSerendipityTopNMetric.Result doMeasureUser(TestUser user, MeanAccumulator context) {
 		List<ScoredId> recommendations = user.getRecommendations(evaluationListSize, candidates, exclude);
 		if (recommendations == null || recommendations.isEmpty()) {
+			context.add(0.0);
 			return null;
 		}
 

@@ -105,6 +105,7 @@ public class ExperimentRunner {
 		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateSerendipityNDCGMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
 				Settings.U_THRESHOLD, Settings.D_THRESHOLD));
+		evaluator.addMetric(new AggreagateComponentMetric(prefix, candidates, exclude));
 	}
 
 	private static void addOnePlusRandomMetric(SimpleEvaluator evaluator) {
