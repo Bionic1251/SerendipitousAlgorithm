@@ -2,24 +2,23 @@ package lc.advanced;
 
 import annotation.D_Threshold;
 import annotation.R_Threshold;
-import annotation.RatingPredictor;
 import annotation.U_Threshold;
 import it.unimi.dsi.fastutil.longs.LongCollection;
-import lc.Normalizer;
-import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
-import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
-import org.grouplens.lenskit.vectors.VectorEntry;
 import pop.PopModel;
-import util.*;
+import util.AlgorithmUtil;
+import util.ContentAverageDissimilarity;
+import util.ContentUtil;
+import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
 
 public class LCModelBuilder implements Provider<LCModel> {
 	private final PopModel popModel;
@@ -27,11 +26,10 @@ public class LCModelBuilder implements Provider<LCModel> {
 	private final double rThreshold;
 	private final double dThreshold;
 	private final double uThreshold;
-	private final ItemScorer itemScorer;
 	private Map<Long, SparseVector> userItemDissimilarityMap;
 
-	private final double learningRate = 0.00001;
-	private final double regularizationTerm = 0.0001;
+	private final double learningRate = 0.0001;
+	private final double regularizationTerm = 0.001;
 	private final int iterationCount = 5;
 
 	private double wr = 0.1;
@@ -39,14 +37,13 @@ public class LCModelBuilder implements Provider<LCModel> {
 	private double wu = 0.1;
 
 	@Inject
-	public LCModelBuilder(PopModel popModel, @Transient @Nonnull PreferenceSnapshot snapshot, @RatingPredictor ItemScorer itemScorer,
+	public LCModelBuilder(PopModel popModel, @Transient @Nonnull PreferenceSnapshot snapshot,
 						  @R_Threshold double rThreshold, @D_Threshold double dThreshold, @U_Threshold double uThreshold) {
 		this.popModel = popModel;
 		this.snapshot = snapshot;
 		this.rThreshold = rThreshold;
 		this.dThreshold = dThreshold;
 		this.uThreshold = uThreshold;
-		this.itemScorer = itemScorer;
 		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
 		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
 	}
@@ -60,14 +57,6 @@ public class LCModelBuilder implements Provider<LCModel> {
 
 	private void trainForEachUser(long userId) {
 		Collection<IndexedPreference> prefs = snapshot.getUserRatings(userId);
-		List<Long> ids = prefsToIds(prefs);
-		SparseVector predVector = itemScorer.score(userId, ids);
-		Normalizer ratingNormalizer = Util.getVectorNormalizer(predVector);
-		Map<Long, Double> dMap = getDissimMap(userId, predVector);
-		Normalizer dNormalizer = Util.getMapNormalizer(dMap);
-		Map<Long, Double> uMap = getUnpopMap(predVector);
-		Normalizer uNormalizer = Util.getMapNormalizer(uMap);
-		//Fixme: scale ratings, dissims and unpops!
 		for (IndexedPreference innerPref : prefs) {
 			for (IndexedPreference outerPref : prefs) {
 				if (innerPref.getItemId() == outerPref.getItemId()) {
@@ -77,47 +66,13 @@ public class LCModelBuilder implements Provider<LCModel> {
 				Triple outerTriple = new Triple(userId, outerPref.getItemId(), outerPref.getValue());
 				double innerSer = getSerendipity(innerTriple);
 				double outerSer = getSerendipity(outerTriple);
-				Triple innerPredTriple = new Triple(userId, innerPref.getItemId(), predVector.get(innerPref.getItemId()));
-				innerPredTriple.rating = ratingNormalizer.norm(predVector.get(innerPref.getItemId()));
-				innerPredTriple.unpopularity = uNormalizer.norm(uMap.get(innerPref.getItemId()));
-				innerPredTriple.dissimilarity = dNormalizer.norm(dMap.get(innerPref.getItemId()));
-				Triple outerPredTriple = new Triple(userId, outerPref.getItemId(), predVector.get(outerPref.getItemId()));
-				outerPredTriple.rating = ratingNormalizer.norm(predVector.get(outerPref.getItemId()));
-				outerPredTriple.dissimilarity = dNormalizer.norm(dMap.get(outerPref.getItemId()));
-				outerPredTriple.unpopularity = uNormalizer.norm(uMap.get(outerPref.getItemId()));
 				if (innerSer > outerSer) {
-					changeParameters(innerPredTriple, outerPredTriple);
+					changeParameters(innerTriple, outerTriple);
 				} else if (innerSer < outerSer) {
-					changeParameters(outerPredTriple, innerPredTriple);
+					changeParameters(outerTriple, innerTriple);
 				}
 			}
 		}
-	}
-
-	private Map<Long, Double> getDissimMap(long userId, SparseVector scores) {
-		Map<Long, Double> dissimMap = new HashMap<Long, Double>();
-		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
-			double dissim = getDissimilarity(userId, e.getKey());
-			dissimMap.put(e.getKey(), dissim);
-		}
-		return dissimMap;
-	}
-
-	private Map<Long, Double> getUnpopMap(SparseVector scores) {
-		Map<Long, Double> unpopMap = new HashMap<Long, Double>();
-		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
-			double unpop = 1.0 - (double) popModel.getPop(e.getKey()) / popModel.getMax();
-			unpopMap.put(e.getKey(), unpop);
-		}
-		return unpopMap;
-	}
-
-	private List<Long> prefsToIds(Collection<IndexedPreference> prefs) {
-		List<Long> ids = new ArrayList<Long>();
-		for (IndexedPreference preference : prefs) {
-			ids.add(preference.getItemId());
-		}
-		return ids;
 	}
 
 	private void changeParameters(Triple serTriple, Triple unserTriple) {
@@ -164,13 +119,6 @@ public class LCModelBuilder implements Provider<LCModel> {
 		double sum = 0;
 		for (long userId : userIds) {
 			Collection<IndexedPreference> prefs = snapshot.getUserRatings(userId);
-			List<Long> ids = prefsToIds(prefs);
-			SparseVector predVector = itemScorer.score(userId, ids);
-			Normalizer ratingNormalizer = Util.getVectorNormalizer(predVector);
-			Map<Long, Double> dMap = getDissimMap(userId, predVector);
-			Normalizer dNormalizer = Util.getMapNormalizer(dMap);
-			Map<Long, Double> uMap = getUnpopMap(predVector);
-			Normalizer uNormalizer = Util.getMapNormalizer(uMap);
 			for (IndexedPreference innerPref : prefs) {
 				for (IndexedPreference outerPref : prefs) {
 					if (innerPref.getItemId() == outerPref.getItemId()) {
@@ -180,19 +128,11 @@ public class LCModelBuilder implements Provider<LCModel> {
 					Triple outerTriple = new Triple(userId, outerPref.getItemId(), outerPref.getValue());
 					double innerSer = getSerendipity(innerTriple);
 					double outerSer = getSerendipity(outerTriple);
-					Triple innerPredTriple = new Triple(userId, innerPref.getItemId(), predVector.get(innerPref.getItemId()));
-					innerPredTriple.rating = ratingNormalizer.norm(predVector.get(innerPref.getItemId()));
-					innerPredTriple.unpopularity = uNormalizer.norm(uMap.get(innerPref.getItemId()));
-					innerPredTriple.dissimilarity = dNormalizer.norm(dMap.get(innerPref.getItemId()));
-					Triple outerPredTriple = new Triple(userId, outerPref.getItemId(), predVector.get(outerPref.getItemId()));
-					outerPredTriple.rating = ratingNormalizer.norm(predVector.get(outerPref.getItemId()));
-					outerPredTriple.dissimilarity = dNormalizer.norm(dMap.get(outerPref.getItemId()));
-					outerPredTriple.unpopularity = uNormalizer.norm(uMap.get(outerPref.getItemId()));
 					double val = 0;
 					if (innerSer > outerSer) {
-						val = getPredictedSerendipity(innerPredTriple) - getPredictedSerendipity(outerPredTriple);
+						val = getPredictedSerendipity(innerTriple) - getPredictedSerendipity(outerTriple);
 					} else if (innerSer < outerSer) {
-						val = getPredictedSerendipity(outerPredTriple) - getPredictedSerendipity(innerPredTriple);
+						val = getPredictedSerendipity(outerTriple) - getPredictedSerendipity(innerTriple);
 					}
 					sum += val;
 				}
