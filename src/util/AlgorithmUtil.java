@@ -287,7 +287,7 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
-	private static LenskitConfiguration getAdvancedLC() {
+	public static LenskitConfiguration getAdvancedLC() {
 		LenskitConfiguration alg = new LenskitConfiguration();
 		alg.bind(ItemScorer.class).to(LCAdvancedItemScorer.class);
 		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
@@ -303,7 +303,7 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
-	private static LenskitConfiguration getPureSVD() {
+	public static LenskitConfiguration getPureSVD() {
 		LenskitConfiguration pureSVD = new LenskitConfiguration();
 		pureSVD.bind(ItemScorer.class).to(PureSVDItemScorer.class);
 		pureSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);

@@ -14,10 +14,7 @@ import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.VectorEntry;
 import pop.PopModel;
-import util.AlgorithmUtil;
-import util.ContentAverageDissimilarity;
-import util.ContentUtil;
-import util.Settings;
+import util.*;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -47,11 +44,11 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 	public void score(long user, @Nonnull MutableSparseVector scores) {
 		MutableSparseVector ratings = scores.copy();
 		itemScorer.score(user, ratings);
-		Normalizer ratingNormalizer = getRatingNormalizer(ratings);
+		Normalizer ratingNormalizer = Util.getVectorNormalizer(ratings);
 		Map<Long, Double> unpopMap = getUnpopMap(scores);
-		Normalizer unpopNormalizer = getMapNormalizer(unpopMap);
+		Normalizer unpopNormalizer = Util.getMapNormalizer(unpopMap);
 		Map<Long, Double> dissimMap = getDissimMap(user, scores);
-		Normalizer dissimNormalizer = getMapNormalizer(dissimMap);
+		Normalizer dissimNormalizer = Util.getMapNormalizer(dissimMap);
 		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
 			double dissim = dissimNormalizer.norm(dissimMap.get(e.getKey()));
 			double unpop = unpopNormalizer.norm(unpopMap.get(e.getKey()));
@@ -59,16 +56,6 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 			double total = lcModel.getUw() * unpop + lcModel.getRw() * rating / Settings.MAX + lcModel.getDw() * dissim;
 			scores.set(e, total);
 		}
-	}
-
-	private Normalizer getMapNormalizer(Map<Long, Double> map) {
-		double min = Double.MAX_VALUE;
-		double max = Double.MIN_VALUE;
-		for (double val : map.values()) {
-			min = Math.min(min, val);
-			max = Math.max(max, val);
-		}
-		return new Normalizer(min, max);
 	}
 
 	private Map<Long, Double> getDissimMap(long userId, MutableSparseVector scores) {
@@ -87,16 +74,6 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 			unpopMap.put(e.getKey(), unpop);
 		}
 		return unpopMap;
-	}
-
-	private Normalizer getRatingNormalizer(MutableSparseVector ratings) {
-		double min = Double.MAX_VALUE;
-		double max = Double.MIN_VALUE;
-		for (VectorEntry e : ratings.view(VectorEntry.State.EITHER)) {
-			min = Math.min(min, e.getValue());
-			max = Math.max(max, e.getValue());
-		}
-		return new Normalizer(min, max);
 	}
 
 	private double getDissim(long userId, long itemId) {

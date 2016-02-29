@@ -10,6 +10,9 @@ public class Normalizer {
 	}
 
 	public double norm(double val) {
+		if (min == max) {
+			return val / max;
+		}
 		return (val - min) / (max - min);
 	}
 }
