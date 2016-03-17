@@ -27,7 +27,6 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 	private final ItemScorer itemScorer;
 	private final PreferenceSnapshot snapshot;
 	private final LCModel lcModel;
-	private final Map<Long, SparseVector> itemContentMap;
 
 	@Inject
 	public LCAdvancedItemScorer(PopModel model, @RatingPredictor ItemScorer itemScorer,
@@ -36,8 +35,6 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 		this.itemScorer = itemScorer;
 		this.snapshot = snapshot;
 		this.lcModel = lcModel;
-		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
-		itemContentMap = dissimilarity.getItemContentMap();
 	}
 
 	@Override
@@ -77,13 +74,7 @@ public class LCAdvancedItemScorer extends AbstractItemScorer {
 	}
 
 	private double getDissim(long userId, long itemId) {
-		Collection<IndexedPreference> prefs = snapshot.getUserRatings(userId);
-		SparseVector itemVec = itemContentMap.get(itemId);
-		double dissim = 0.0;
-		for (IndexedPreference p : prefs) {
-			SparseVector ratedItemVec = itemContentMap.get(p.getItemId());
-			dissim += 1.0 - ContentUtil.getCosine(ratedItemVec, itemVec);
-		}
-		return dissim / prefs.size();
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		return dissimilarity.getAverageDissimilarity(userId, itemId, snapshot);
 	}
 }

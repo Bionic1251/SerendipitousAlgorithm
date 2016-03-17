@@ -88,7 +88,7 @@ public class PrepareUtil {
 		return max;
 	}
 
-	private static Map<String, Integer> getPopMap(String ratingPath) {
+	public static Map<String, Integer> getPopMap(String ratingPath) {
 		Map<String, Integer> popMap = new HashMap<String, Integer>();
 		try {
 			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
@@ -233,6 +233,62 @@ public class PrepareUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public static void printMoviesAndGetNames(String path, Map<String, String> map, String sep) {
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
+			try {
+				String text;
+				String line = reader.readLine();
+				while (line != null) {
+					String[] vector = line.split(sep);
+					text = vector[0];
+					if (map.containsKey(text)) {
+						map.put(text, vector[1]);
+						System.out.println(line);
+					}
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void getMoviesByName(String path, Map<String, String> map) {
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
+			try {
+				String text;
+				String line = reader.readLine();
+				while (line != null) {
+					String[] vector = line.split("::");
+					text = vector[1];
+					String key = getKey(map, text);
+					if (key != null) {
+						System.out.println(line);
+						map.put(key, line);
+					}
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static String getKey(Map<String, String> map, String val) {
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if (entry.getValue().equals(val)) {
+				return entry.getKey();
+			}
+		}
+		return null;
 	}
 
 	public static void prepareSmallDataset(String path) {

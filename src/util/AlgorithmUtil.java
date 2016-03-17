@@ -9,6 +9,8 @@ import funkSVD.lu.LuUpdateRuleHinge;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import lc.advanced.LCAdvancedItemScorer;
 import lc.basic.LCItemScorer;
+import lc.investigation.NonPersInvestigationItemScorer;
+import lc.investigation_per_user.InvestigationPerUserItemScorer;
 import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
 import mf.pureSVD.PureSVDItemScorer;
@@ -26,7 +28,6 @@ import org.grouplens.lenskit.knn.NeighborhoodSize;
 import org.grouplens.lenskit.knn.item.ItemItemScorer;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FunkSVDItemScorer;
-import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
 import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import pop.PopItemScorer;
@@ -77,6 +78,22 @@ public class AlgorithmUtil {
 		adaSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		adaSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
 		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		adaSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
+		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
+		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
+		return adaSVD;
+	}
+
+	public static LenskitConfiguration getAdaPureSVD() {
+		LenskitConfiguration adaSVD = new LenskitConfiguration();
+		adaSVD.bind(ItemScorer.class).to(AdaItemScorer.class);
+		adaSVD.bind(RatingPredictor.class, ItemScorer.class).to(PureSVDItemScorer.class);
+		adaSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		adaSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		adaSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		adaSVD.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
+		adaSVD.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
+		adaSVD.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
 		adaSVD.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		adaSVD.set(NeighborhoodSize.class).to(Integer.MAX_VALUE);
 		adaSVD.bind(VectorSimilarity.class).to(PearsonCorrelation.class);
@@ -287,7 +304,22 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
-	public static LenskitConfiguration getAdvancedLC() {
+	public static LenskitConfiguration getInvestigation() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(NonPersInvestigationItemScorer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getInvestigationPerUser() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(InvestigationPerUserItemScorer.class);
+		alg.set(R_Threshold.class).to(Settings.R_THRESHOLD);
+		alg.set(D_Threshold.class).to(Settings.D_THRESHOLD);
+		alg.set(U_Threshold.class).to(Settings.U_THRESHOLD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getLCSVD() {
 		LenskitConfiguration alg = new LenskitConfiguration();
 		alg.bind(ItemScorer.class).to(LCAdvancedItemScorer.class);
 		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
@@ -297,6 +329,22 @@ public class AlgorithmUtil {
 		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
 		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.set(R_Threshold.class).to(Settings.R_THRESHOLD);
+		alg.set(D_Threshold.class).to(Settings.D_THRESHOLD);
+		alg.set(U_Threshold.class).to(Settings.U_THRESHOLD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getLCPureSVD() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(LCAdvancedItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(PureSVDItemScorer.class);
+		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
 		alg.set(R_Threshold.class).to(Settings.R_THRESHOLD);
 		alg.set(D_Threshold.class).to(Settings.D_THRESHOLD);
 		alg.set(U_Threshold.class).to(Settings.U_THRESHOLD);
@@ -337,6 +385,7 @@ public class AlgorithmUtil {
 
 		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVDContent());
 		configurationMap.put("AdaSVD", AlgorithmUtil.getAdaSVD());
+		configurationMap.put("AdaPureSVD", AlgorithmUtil.getAdaPureSVD());
 		configurationMap.put("ItemItem", AlgorithmUtil.getItemItem());
 		configurationMap.put("Random", AlgorithmUtil.getRandom());
 
@@ -346,8 +395,11 @@ public class AlgorithmUtil {
 		configurationMap.put("LCRU", AlgorithmUtil.getLCRU());
 		configurationMap.put("LCU", AlgorithmUtil.getLCU());
 		configurationMap.put("LCD", AlgorithmUtil.getLCD());
-		configurationMap.put("LCAdvanced", AlgorithmUtil.getAdvancedLC());
+		configurationMap.put("LCSVD", AlgorithmUtil.getLCSVD());
+		configurationMap.put("LCPureSVD", AlgorithmUtil.getLCPureSVD());
 		configurationMap.put("PureSVD", AlgorithmUtil.getPureSVD());
+		configurationMap.put("Investigation", AlgorithmUtil.getInvestigation());
+		configurationMap.put("Investigation_per_user", AlgorithmUtil.getInvestigationPerUser());
 		return configurationMap;
 	}
 }

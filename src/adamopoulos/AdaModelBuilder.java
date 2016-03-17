@@ -11,6 +11,9 @@ import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import pop.PopModel;
+import util.ContentAverageDissimilarity;
+import util.ContentUtil;
+import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -19,16 +22,16 @@ import java.util.*;
 
 public class AdaModelBuilder implements Provider<AdaModel> {
 	private final ItemScorer baseline;
-	private final ItemItemModel itemItemModel;
 	private final PopModel popModel;
 	private final PreferenceSnapshot snapshot;
 	private final double threshold;
+	private final double learningRate = 0.0001;
+	private final double regularizationTerm = 0.00001;
 
 	@Inject
-	public AdaModelBuilder(@RatingPredictor ItemScorer baseline, ItemItemModel itemItemModel, PopModel popModel,
+	public AdaModelBuilder(@RatingPredictor ItemScorer baseline, PopModel popModel,
 						   @Transient @Nonnull PreferenceSnapshot snapshot, @R_Threshold double threshold) {
 		this.baseline = baseline;
-		this.itemItemModel = itemItemModel;
 		this.snapshot = snapshot;
 		this.threshold = threshold;
 		this.popModel = popModel;
@@ -52,39 +55,44 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		LongCollection users = snapshot.getUserIds();
 		int count = 0;
 		int error = 0;
+		double sum = 0;
 		for (Long userId : users) {
 			count++;
 			if (count % 100 == 0) {
 				System.out.println(count + " users processed");
 			}
-			SparseVector prediction = baseline.score(userId, items);
 			Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
 			for (IndexedPreference rating1 : preferences) {
 				for (IndexedPreference rating2 : preferences) {
-					int serendipity1 = getSerendipity(rating1);
-					int serendipity2 = getSerendipity(rating2);
+					double unpop1 = popModel.getPop(rating1.getItemId()) / popModel.getMax();
+					double dissim1 = model.getDissimilarity(userId, rating1.getItemId());
+					double serendipity1 = getSerendipity(rating1.getValue(), dissim1, unpop1);
+					double unpop2 = popModel.getPop(rating2.getItemId()) / popModel.getMax();
+					double dissim2 = model.getDissimilarity(userId, rating2.getItemId());
+					double serendipity2 = getSerendipity(rating2.getValue(), dissim2, unpop2);
 					if (rating1.equals(rating2) || serendipity1 == 0 && serendipity2 == 0) {
 						continue;
 					}
 
 					double d1 = model.getDistance(userId, rating1.getItemId());
 					double d2 = model.getDistance(userId, rating2.getItemId());
-					double r1 = prediction.get(rating1.getItemId());
-					double r2 = prediction.get(rating2.getItemId());
+					double r1 = rating1.getValue();
+					double r2 = rating2.getValue();
 					double rank1 = model.getRank(r1, d1);
 					double rank2 = model.getRank(r2, d2);
-					if (((serendipity1 > serendipity2 && rank1 < rank2) || (serendipity2 > serendipity1 && rank2 < rank1)) && d1 != d2) {
-						error++;
+					if (serendipity1 > serendipity2 && rank2 > rank1) {
+						sum += rank1 - rank2;
+					} else if (serendipity2 > serendipity1 && rank1 > rank2) {
+						sum += rank2 - rank1;
 					}
 				}
 			}
 		}
-		System.out.println("Error " + error);
+		System.out.println("Sum " + sum);
 	}
 
 	private void learnParameters(AdaModel model) {
 		System.out.println("Learning parameters");
-		LongCollection items = snapshot.getItemIds();
 		LongCollection users = snapshot.getUserIds();
 		int count = 0;
 		for (Long userId : users) {
@@ -92,30 +100,31 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 			if (count % 100 == 0) {
 				System.out.println(count + " users processed");
 			}
-			SparseVector prediction = baseline.score(userId, items);
 			Collection<IndexedPreference> preferences = snapshot.getUserRatings(userId);
 			for (IndexedPreference rating1 : preferences) {
 				for (IndexedPreference rating2 : preferences) {
-					int serendipity1 = getSerendipity(rating1);
-					int serendipity2 = getSerendipity(rating2);
+					double unpop1 = popModel.getPop(rating1.getItemId()) / popModel.getMax();
+					double dissim1 = model.getDissimilarity(userId, rating1.getItemId());
+					double serendipity1 = getSerendipity(rating1.getValue(), dissim1, unpop1);
+					double unpop2 = popModel.getPop(rating2.getItemId()) / popModel.getMax();
+					double dissim2 = model.getDissimilarity(userId, rating2.getItemId());
+					double serendipity2 = getSerendipity(rating2.getValue(), dissim2, unpop2);
 					if (rating1.equals(rating2) || serendipity1 == 0 && serendipity2 == 0) {
 						continue;
 					}
 
 					double d1 = model.getDistance(userId, rating1.getItemId());
 					double d2 = model.getDistance(userId, rating2.getItemId());
-					double r1 = prediction.get(rating1.getItemId());
-					double r2 = prediction.get(rating2.getItemId());
-					double rank1 = model.getRank(r1, d1);
-					double rank2 = model.getRank(r2, d2);
+					double r1 = rating1.getValue();
+					double r2 = rating2.getValue();
 					double q = model.getQ();
 					double lambda = model.getLambda();
-					double learningRate = 0.0001;
-					double regularizationTerm = 0.00001;
-					if (serendipity1 > serendipity2 && rank1 < rank2) {
+					double rank1 = model.getRank(r1, d1);
+					double rank2 = model.getRank(r2, d2);
+					if (serendipity1 > serendipity2 && rank2 > rank1) {
 						model.setQ(q + (r1 - r2 - regularizationTerm * q) * learningRate);
 						model.setLambda(lambda + (d2 - d1 - regularizationTerm * lambda) * learningRate);
-					} else if (serendipity2 > serendipity1 && rank2 < rank1) {
+					} else if (serendipity2 > serendipity1 && rank1 > rank2) {
 						model.setQ(q + (r2 - r1 - regularizationTerm * q) * learningRate);
 						model.setLambda(lambda + (d1 - d2 - regularizationTerm * lambda) * learningRate);
 					}
@@ -125,11 +134,18 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		System.out.println("q " + model.getQ() + "; lambda " + model.getLambda());
 	}
 
-	private int getSerendipity(IndexedPreference rating) {
-		if (rating.getValue() < threshold) {
+	private double getSerendipity(double rating, double dissimilarity, double unpopularity) {
+		if (rating <= Settings.R_THRESHOLD) {
 			return 0;
 		}
-		return popModel.getPop(rating.getItemId());
+		if (dissimilarity <= Settings.D_THRESHOLD) {
+			return 0;
+		}
+		if (unpopularity <= Settings.U_THRESHOLD) {
+			return 0;
+		}
+		double result = rating / Settings.MAX + dissimilarity + unpopularity;
+		return result;
 	}
 
 	private AdaModel createModel() {
@@ -184,10 +200,14 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 	}
 
 	private double getDissimilarity(Long itemId1, Long itemId2) {
-		SparseVector neighbors = itemItemModel.getNeighbors(itemId1);
-		if (!neighbors.containsKey(itemId2)) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> itemMap = dissimilarity.getItemContentMap();
+		if (!itemMap.containsKey(itemId1) || !itemMap.containsKey(itemId2)) {
 			return 1;
 		}
-		return 1 - neighbors.get(itemId2);
+		SparseVector vec1 = itemMap.get(itemId1);
+		SparseVector vec2 = itemMap.get(itemId2);
+		double sim = ContentUtil.getCosine(vec1, vec2);
+		return 1 - sim;
 	}
 }

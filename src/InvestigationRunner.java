@@ -8,68 +8,31 @@ import util.AlgorithmUtil;
 import util.ContentAverageDissimilarity;
 import util.Settings;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Properties;
 
-public class RecommenderRunner {
-	public static void main(String args[]) throws Exception {
+public class InvestigationRunner {
+	public static void main(String[] args) {
 		setParameters();
 		ContentAverageDissimilarity.create(Settings.DATASET_CONTENT);
-		PrintWriter datasetWriter = new PrintWriter(new File("res.txt"));
-
-		List<ScoredId> pop = getRecs(AlgorithmUtil.getPop());
-		datasetWriter.println("Pop");
-		datasetWriter.println(pop);
-
-		List<ScoredId> svd = getRecs(AlgorithmUtil.getSVD());
-		datasetWriter.println("SVD");
-		datasetWriter.println(svd);
-
-		List<ScoredId> lcSVD = getRecs(AlgorithmUtil.getLCSVD());
-		datasetWriter.println("lcSVD");
-		datasetWriter.println(lcSVD);
-
-		List<ScoredId> random = getRecs(AlgorithmUtil.getRandom());
-		datasetWriter.println("Random");
-		datasetWriter.println(random);
-
-		List<ScoredId> pureSVD = getRecs(AlgorithmUtil.getPureSVD());
-		datasetWriter.println("PureSVD");
-		datasetWriter.println(pureSVD);
-
-		List<ScoredId> zheng = getRecs(AlgorithmUtil.getZhengSVDContent());
-		datasetWriter.println("Zheng");
-		datasetWriter.println(zheng);
-
-		List<ScoredId> spr = getRecs(AlgorithmUtil.getLuSVDHinge10000());
-		datasetWriter.println("SPR");
-		datasetWriter.println(spr);
-
-		System.out.println("SVD");
-		System.out.println(svd);
-		System.out.println("PureSVD");
-		System.out.println(pureSVD);
-
-		System.out.println("LCSVD");
-		System.out.println(lcSVD);
-		System.out.println("SPR");
-		System.out.println(spr);
-		System.out.println("Zheng");
-		System.out.println(zheng);
-		System.out.println("Pop");
-		System.out.println(pop);
-		System.out.println("Random");
-		System.out.println(random);
-		datasetWriter.close();
+		getRecs(AlgorithmUtil.getInvestigation());
 	}
 
-	private static List<ScoredId> getRecs(LenskitConfiguration configuration) throws Exception {
-		configuration.bind(EventDAO.class).to(new SimpleFileRatingDAO(new File(Settings.DATASET), "\t"));
-		LenskitRecommender pop = LenskitRecommender.build(configuration);
-		ItemRecommender itemRecommender = pop.getItemRecommender();
-		List<ScoredId> recs = itemRecommender.recommend(100000l, 10);
-		return recs;
+	private static List<ScoredId> getRecs(LenskitConfiguration configuration) {
+		try {
+			configuration.bind(EventDAO.class).to(new SimpleFileRatingDAO(new File(Settings.DATASET), "\t"));
+			LenskitRecommender pop = LenskitRecommender.build(configuration);
+			ItemRecommender itemRecommender = pop.getItemRecommender();
+			List<ScoredId> recs = itemRecommender.recommend(100000l, 10);
+			return recs;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	private static void setParameters() {

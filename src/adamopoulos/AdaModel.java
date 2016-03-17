@@ -11,7 +11,7 @@ import java.util.Map;
 @Shareable
 public class AdaModel {
 	private double q = 1;
-	private double lambda = 1;
+	private double lambda = -1;
 	private double averageDistance;
 	private ItemScorer baseline;
 	private Map<Long, SparseVector> userItemDistanceMap;
@@ -46,6 +46,17 @@ public class AdaModel {
 
 	public double getLambda() {
 		return lambda;
+	}
+
+	public double getDissimilarity(Long userId, Long itemId) {
+		if (!userItemDistanceMap.containsKey(userId)) {
+			return 1.0;
+		}
+		SparseVector itemMap = userItemDistanceMap.get(userId);
+		if (!itemMap.containsKey(itemId)) {
+			return 1.0;
+		}
+		return itemMap.get(itemId);
 	}
 
 	public double getDistance(Long userId, Long itemId) {
