@@ -19,6 +19,8 @@ import org.grouplens.lenskit.util.statistics.MeanAccumulator;
 import org.grouplens.lenskit.vectors.SparseVector;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
+import util.PrepareUtil;
+import util.Settings;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -38,6 +40,7 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 	private final ItemSelector candidates;
 	private final ItemSelector exclude;
 	private final String suffix;
+	private int count;
 
 	public AggreagateComponentMetric(String suffix, ItemSelector candidates, ItemSelector exclude) {
 		super(AggreagateComponentMetric.CompRes.class, AggreagateComponentMetric.CompRes.class);
@@ -53,6 +56,10 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 
 	@Override
 	protected AggreagateComponentMetric.CompRes doMeasureUser(TestUser user, MeanAccumulator context) {
+		count++;
+		if (count % 100 == 0) {
+			System.out.println(count + " users " + this.getClass());
+		}
 		List<ScoredId> recommendations = user.getRecommendations(20, candidates, exclude);
 		if (recommendations == null || recommendations.isEmpty()) {
 			dAccumulator1.add(0);
@@ -122,7 +129,7 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 		SparseVector item = dMap.get(itemId);
 		for (Long ratedItemId : ratedIds) {
 			SparseVector ratedItem = dMap.get(ratedItemId);
-			dissim += 1.0 - ContentUtil.getCosine(item, ratedItem);
+			dissim += 1.0 - ContentUtil.getSim(item, ratedItem);
 		}
 		dissim = dissim / ratedIds.size();
 		return dissim;
@@ -137,8 +144,24 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 	@Nullable
 	@Override
 	public MeanAccumulator createContext(Attributed algorithm, TTDataSet dataSet, Recommender recommender) {
+		System.out.println("createContext " + this.getClass());
 		updateExpectedItems(dataSet);
+		count = 0;
+		updateAccumulators();
 		return new MeanAccumulator();
+	}
+
+	private void updateAccumulators(){
+		uAccumulator1 = new MeanAccumulator();
+		uAccumulator5 = new MeanAccumulator();
+		uAccumulator10 = new MeanAccumulator();
+		uAccumulator15 = new MeanAccumulator();
+		uAccumulator20 = new MeanAccumulator();
+		dAccumulator1 = new MeanAccumulator();
+		dAccumulator5 = new MeanAccumulator();
+		dAccumulator10 = new MeanAccumulator();
+		dAccumulator15 = new MeanAccumulator();
+		dAccumulator20 = new MeanAccumulator();
 	}
 
 	private void updateExpectedItems(TTDataSet dataSet) {
@@ -164,6 +187,10 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 			popMap.put(container.getId(), (double) container.getValue() / (double) maxVal);
 		}
 	}
+
+	/*private void updateExpectedItems(TTDataSet dataSet) {
+		popMap = PrepareUtil.getNormalizedPopMap(dataSet.getTrainingData().getName(), "\t");
+	}*/
 
 	public static class CompRes {
 		@ResultColumn("Unpop1")

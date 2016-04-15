@@ -20,6 +20,7 @@ import org.grouplens.lenskit.iterative.TrainingLoopController;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
+import pop.PopModel;
 import util.Settings;
 import util.Util;
 
@@ -42,16 +43,16 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 	protected PreferenceSnapshot snapshot;
 	protected final double initialValue;
 	private final double threshold;
-	protected Map<Integer, Double> popMap;
 	private LuFunkSVDUpdateRule rule;
 	private UserPreferences userPreferences;
+	private PopModel popModel;
 
 	@Inject
 	public LuSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 							 @FeatureCount int featureCount,
 							 @InitialFeatureValue double initVal,
 							 @R_Threshold double threshold, @Alpha double alpha, StoppingCondition stop,
-							 @UpdateRule LuFunkSVDUpdateRule rule, @NormMult double mult) {
+							 @UpdateRule LuFunkSVDUpdateRule rule, @NormMult double mult, PopModel popModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -61,12 +62,12 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		stoppingCondition = stop;
 		this.rule = rule;
 		this.mult = mult;
+		this.popModel = popModel;
 	}
 
 	@Override
 	public LuSVDModel get() {
 		System.out.println(LuSVDModelBuilder.class);
-		popMap = Util.getPopMap(snapshot);
 
 		userPreferences = new UserPreferences(snapshot, threshold);
 
@@ -129,7 +130,7 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		likedPred = domain.clampValue(likedPred);
 		dislikedPred = domain.clampValue(dislikedPred);
 
-		double pop = Math.pow(popMap.get(disliked.getItemIndex()), alpha);
+		double pop = Math.pow(popModel.getPop(disliked.getItemId()) / popModel.getMax(), alpha);
 		pop *= norm * mult;
 		double diff = likedPred - dislikedPred;
 
@@ -170,7 +171,7 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		likedPred = domain.clampValue(likedPred);
 		dislikedPred = domain.clampValue(dislikedPred);
 
-		double pop = Math.pow(popMap.get(disliked.getItemIndex()), alpha);
+		double pop = Math.pow(popModel.getPop(disliked.getItemId()) / popModel.getMax(), alpha);
 		pop *= norm * mult;
 		double diff = likedPred - dislikedPred;
 

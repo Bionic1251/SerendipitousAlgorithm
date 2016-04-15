@@ -1,6 +1,5 @@
 package evaluationMetric;
 
-import it.unimi.dsi.fastutil.longs.LongSet;
 import org.grouplens.lenskit.Recommender;
 import org.grouplens.lenskit.data.dao.UserEventDAO;
 import org.grouplens.lenskit.data.event.Event;
@@ -10,7 +9,6 @@ import org.grouplens.lenskit.eval.Attributed;
 import org.grouplens.lenskit.eval.data.traintest.TTDataSet;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.util.statistics.MeanAccumulator;
-import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import util.ContentUtil;
 
@@ -76,7 +74,7 @@ public class AggregateSerendipityTopNMetric extends AggregatePopSerendipityTopNM
 		for (Long itemId : items) {
 			double avgSim = 0.0;
 			for (Long ratedItemId : ratedItems) {
-				avgSim += ContentUtil.getCosine(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
+				avgSim += ContentUtil.getSim(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
 			}
 			containerList.add(new evaluationMetric.Container<Double>(itemId, avgSim / ratedItems.size()));
 		}
@@ -92,7 +90,7 @@ public class AggregateSerendipityTopNMetric extends AggregatePopSerendipityTopNM
 	private List<Long> getClosestItems(SparseVector userVec, Set<Long> items, int itemNumber) {
 		List<evaluationMetric.Container<Double>> containerList = new ArrayList<evaluationMetric.Container<Double>>();
 		for (Long itemId : items) {
-			double sim = ContentUtil.getCosine(userVec, itemContentMap.get(itemId));
+			double sim = ContentUtil.getSim(userVec, itemContentMap.get(itemId));
 			containerList.add(new evaluationMetric.Container<Double>(itemId, sim));
 		}
 		Collections.sort(containerList);

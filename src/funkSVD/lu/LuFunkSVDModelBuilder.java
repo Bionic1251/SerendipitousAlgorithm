@@ -62,7 +62,6 @@ public class LuFunkSVDModelBuilder implements Provider<LuFunkSVDModel> {
 	@Override
 	public LuFunkSVDModel get() {
 		System.out.println(LuFunkSVDModelBuilder.class);
-		popMap = Util.getPopMap(snapshot);
 
 		userPreferences = new UserPreferences(snapshot, threshold);
 

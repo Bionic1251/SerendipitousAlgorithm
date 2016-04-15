@@ -91,7 +91,7 @@ public class ComponentMetric extends AbstractMetric<MeanAccumulator, ComponentMe
 		SparseVector item = dMap.get(itemId);
 		for (Long ratedItemId : ratedIds) {
 			SparseVector ratedItem = dMap.get(ratedItemId);
-			dissim += 1.0 - ContentUtil.getCosine(item, ratedItem);
+			dissim += 1.0 - ContentUtil.getSim(item, ratedItem);
 		}
 		dissim = dissim / ratedIds.size();
 		return dissim;

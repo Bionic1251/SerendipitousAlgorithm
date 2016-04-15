@@ -25,18 +25,15 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
-public class ExperimentRunner {
+public class NewExperimentRunner {
 
 	private static DelimitedColumnEventFormat eventFormat;
 
 	private static void setEvaluator(SimpleEvaluator evaluator) {
 		eventFormat = new DelimitedColumnEventFormat(new RatingEventType());
-		DataSource dataSource = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));
-		CrossfoldTask task = new CrossfoldTask(Settings.TRAIN_TEST_FOLDER_NAME);
-		task.setHoldout(Settings.HOLDOUT_NUMBER);
-		task.setPartitions(Settings.CROSSFOLD_NUMBER);
-		task.setSource(dataSource);
-		evaluator.addDataset(task);
+		DataSource train = new GenericDataSource("split", new TextEventDAO(new File(Settings.DATASET), eventFormat));
+		DataSource test = new GenericDataSource("split", new TextEventDAO(new File("D:\\gdrive\\PhD stuff\\Research\\Serendipitous algorithm\\results\\OnlineExperiments\\Recommendations\\test.txt"), eventFormat));
+		evaluator.addDataset(train, test);
 
 		Date cur = new Date();
 		SimpleDateFormat format = new SimpleDateFormat("dd.MM.yy_HH.mm.ss");
@@ -89,7 +86,7 @@ public class ExperimentRunner {
 
 		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
+		//addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		//ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");
@@ -100,22 +97,12 @@ public class ExperimentRunner {
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, ItemSelector candidates, String prefix) {
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(Settings.R_THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
-		//evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
-		/*evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateGenresSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));*/
-		/*evaluator.addMetric(new AggregateNRDUMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
-				Settings.U_THRESHOLD, Settings.D_THRESHOLD));*/
-		//evaluator.addMetric(new AggreagateComponentMetric(prefix, candidates, exclude));
-	}
-
-	private static void addOnePlusRandomMetric(SimpleEvaluator evaluator) {
-		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThanOrEqualTo(5.0));
-		ItemSelector exclude = ItemSelectors.trainingItems();
-		ItemSelector testTrain = ItemSelectors.union(ItemSelectors.trainingItems(), ItemSelectors.testItems());
-		ItemSelector randomItems = ItemSelectors.randomSubset(ItemSelectors.setDifference(ItemSelectors.allItems(), testTrain), 1000);
-		ItemSelector randCandidates = ItemSelectors.union(randomItems, ItemSelectors.testItems());
-		evaluator.addMetric(new AggregateOPRMetric(randCandidates, exclude, threshold));
+		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
+		/*evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
+		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
+		evaluator.addMetric(new AggregateNRDUMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
+				Settings.U_THRESHOLD, Settings.D_THRESHOLD));
+		evaluator.addMetric(new AggreagateComponentMetric(prefix, candidates, exclude));*/
 	}
 
 	private static LongSet getPopItems(int popNum) {
@@ -132,4 +119,5 @@ public class ExperimentRunner {
 		}
 		return accum.finishSet();
 	}
+
 }

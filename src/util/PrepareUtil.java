@@ -1,10 +1,10 @@
 package util;
 
+import evaluationMetric.Container;
+import org.grouplens.lenskit.util.statistics.MeanAccumulator;
 import org.grouplens.lenskit.vectors.SparseVector;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 
 public class PrepareUtil {
@@ -47,7 +47,7 @@ public class PrepareUtil {
 		for (Map.Entry<String, Integer> entry : popMap.entrySet()) {
 			if (entry.getValue() >= smallestFreq) {
 				shortSet.add(entry.getKey());
-				if (shortSet.size() >= shortHead) {
+				if (shortSet.size() > shortHead) {
 					break;
 				}
 			}
@@ -157,7 +157,7 @@ public class PrepareUtil {
 					continue;
 				}
 				SparseVector tempContentItem = itemContentMap.get(tempItem.getKey());
-				double sim = ContentUtil.getCosine(tempContentItem, contentItem);
+				double sim = ContentUtil.getSim(tempContentItem, contentItem);
 				double dissim = 1 - sim;
 				sum += dissim;
 			}
@@ -326,6 +326,7 @@ public class PrepareUtil {
 				String line = reader.readLine();
 				String[] vector = line.split("\t");
 				String id = vector[0];
+				printTitle(attributeMap, writer);
 				int[] values = new int[attributeMap.size()];
 				while (line != null) {
 					vector = line.split("\t");
@@ -336,6 +337,10 @@ public class PrepareUtil {
 						values = new int[attributeMap.size()];
 						continue;
 					} else {
+						if (!attributeMap.containsKey(vector[1])) {
+							line = reader.readLine();
+							continue;
+						}
 						int index = attributeMap.get(vector[1]);
 						values[index] = 1;
 					}
@@ -352,6 +357,18 @@ public class PrepareUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static void printTitle(Map<String, Integer> attributeMap, PrintWriter writer) {
+		String out = "id,";
+		for (int i = 0; i < attributeMap.size(); i++) {
+			for (Map.Entry<String, Integer> entry : attributeMap.entrySet()) {
+				if (entry.getValue().equals(i)) {
+					out += entry.getKey() + ",";
+				}
+			}
+		}
+		writer.println(out.substring(0, out.length() - 1));
 	}
 
 	private static void saveItem(String id, int[] values, PrintWriter writer) {
@@ -410,11 +427,186 @@ public class PrepareUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		set.remove("IMAX");
+		set.remove("Short");
 		List<String> list = new ArrayList<String>(set);
 		Map<String, Integer> map = new HashMap<String, Integer>();
 		for (int i = 0; i < list.size(); i++) {
 			map.put(list.get(i), i);
 		}
 		return map;
+	}
+
+	public static Map<Long, Double> getAverageRatingMap(String path) {
+		Map<Long, Double> averageRatingMap = new HashMap<Long, Double>();
+		Map<Long, MeanAccumulator> map = new HashMap<Long, MeanAccumulator>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] vector = line.split(",");
+					long userId = Long.valueOf(vector[0]);
+					double rating = Double.valueOf(vector[2]);
+					MeanAccumulator meanAccumulator = new MeanAccumulator();
+					if (map.containsKey(userId)) {
+						meanAccumulator = map.get(userId);
+					}
+					meanAccumulator.add(rating);
+					map.put(userId, meanAccumulator);
+					line = reader.readLine();
+				}
+				for (Map.Entry<Long, MeanAccumulator> entry : map.entrySet()) {
+					averageRatingMap.put(entry.getKey(), entry.getValue().getMean());
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return averageRatingMap;
+	}
+
+	public static void printItemPopularity(String path) {
+		Map<String, Integer> popMap = PrepareUtil.getPopMap(path);
+		Map<Integer, Integer> itemMap = new HashMap<Integer, Integer>();
+		for (Integer val : popMap.values()) {
+			int count = 0;
+			if (itemMap.containsKey(val)) {
+				count = itemMap.get(val);
+			}
+			count++;
+			itemMap.put(val, count);
+		}
+		List<Integer> list = new ArrayList<Integer>(itemMap.keySet());
+		Collections.sort(list);
+		for (Integer freq : list) {
+			System.out.println(freq + "\t" + itemMap.get(freq));
+		}
+	}
+
+/*	public static void serrialize(MapStorage storage, String filename) {
+		try {
+			FileOutputStream fos = new FileOutputStream(filename);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeObject(storage);
+			oos.flush();
+			oos.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}*/
+
+/*	public static MapStorage unserrialize(String filename) {
+		try {
+			FileInputStream fis = new FileInputStream(filename);
+			ObjectInputStream oin = new ObjectInputStream(fis);
+			MapStorage ts = (MapStorage) oin.readObject();
+			return ts;
+		} catch (Exception e) {
+			System.out.println("Did not find " + filename);
+		}
+		return null;
+	}*/
+
+	public static void preprocess10M(String ratingPath, String contentPath) {
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			PrintWriter datasetWriter = new PrintWriter(new File("newRatings.dat"));
+			try {
+				Set<String> ids = getContentIds(contentPath);
+				String line = reader.readLine();
+				while (line != null) {
+					String[] split = line.split("::");
+					if (ids.contains(split[1])) {
+						datasetWriter.println(split[0] + "\t" + split[1] + "\t" + split[2] + "\t" + split[3]);
+					}
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+				datasetWriter.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static Set<String> getContentIds(String contentPath) {
+		Set<String> ids = new HashSet<String>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(contentPath));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] split = line.split(",");
+					ids.add(split[0]);
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ids;
+	}
+
+	public static Set<Long> getUserProfile(String path, long currentUserId) {
+		Set<Long> itemSet = new HashSet<Long>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] vector = line.split(",");
+					long userId = Long.valueOf(vector[0]);
+					long itemId = Long.valueOf(vector[1]);
+					if (userId == currentUserId) {
+						itemSet.add(itemId);
+					}
+					line = reader.readLine();
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return itemSet;
+	}
+
+	public static Map<Long, Double> getNormalizedPopMap(String ratingPath, String separator) {
+		Map<Long, Double> popMap = new HashMap<Long, Double>();
+		double max = 0;
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] split = line.split(separator);
+					Long itemId = Long.valueOf(split[1]);
+					double num = 0;
+					if (popMap.containsKey(itemId)) {
+						num = popMap.get(itemId);
+					}
+					num = num + 1;
+					popMap.put(itemId, num);
+					max = Math.max(max, num);
+					line = reader.readLine();
+				}
+				Iterator<Map.Entry<Long, Double>> iterator = popMap.entrySet().iterator();
+				while (iterator.hasNext()) {
+					Map.Entry<Long, Double> entry = iterator.next();
+					entry.setValue(entry.getValue() / max);
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return popMap;
 	}
 }

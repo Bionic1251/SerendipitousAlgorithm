@@ -6,6 +6,7 @@ import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
+import org.grouplens.lenskit.vectors.VectorEntry;
 import pop.PopModel;
 
 import java.io.BufferedReader;
@@ -13,6 +14,7 @@ import java.util.*;
 
 public class ContentAverageDissimilarity {
 	private int[] termDocFreq;
+	private String[] title;
 	private final Map<Long, SparseVector> itemContentMap;
 	private static ContentAverageDissimilarity instance;
 
@@ -35,6 +37,20 @@ public class ContentAverageDissimilarity {
 		return itemContentMap;
 	}
 
+	public SparseVector toTFIDF(SparseVector inputVector) {
+		MutableSparseVector vector = inputVector.mutableCopy();
+		int sum = 0;
+		for (int freq : termDocFreq) {
+			sum += freq;
+		}
+		for (long key : inputVector.keySet()) {
+			double val = inputVector.get(key);
+			double idf = Math.log((double) sum / termDocFreq[(int) key]);
+			vector.set(key, val * idf);
+		}
+		return vector;
+	}
+
 	private Map<Long, SparseVector> getItemContentMap(String path) {
 		Map<Long, SparseVector> itemContentMap = new HashMap<Long, SparseVector>();
 		Map<Long, BitSet> vecMap = getVectors(path);
@@ -43,6 +59,15 @@ public class ContentAverageDissimilarity {
 			itemContentMap.put(entry.getKey(), vector);
 		}
 		return itemContentMap;
+	}
+
+	public MutableSparseVector getEmptyVector() {
+		int num = termDocFreq.length;
+		Collection<Long> features = new ArrayList<Long>();
+		for (long i = 0; i < num; i++) {
+			features.add(i);
+		}
+		return MutableSparseVector.create(features, 0.0);
 	}
 
 	private SparseVector vecByBitSet(BitSet set) {
@@ -68,6 +93,10 @@ public class ContentAverageDissimilarity {
 			BufferedReader reader = new BufferedReader(new java.io.FileReader(path));
 			try {
 				String line = reader.readLine();
+				title = line.split(",");
+				if (title[0].equals("id")) {
+					line = reader.readLine();
+				}
 				while (line != null) {
 					String[] vector = line.split(",");
 					if (termDocFreq == null) {
@@ -76,10 +105,10 @@ public class ContentAverageDissimilarity {
 					}
 					Long id = Long.valueOf(vector[0]);
 					BitSet bitSet = new BitSet(len);
-					for (int i = 1; i < vector.length - 1; i++) {
+					for (int i = 1; i < vector.length; i++) {
 						if (Integer.valueOf(vector[i]) != 0) {
-							bitSet.set(i);
-							termDocFreq[i]++;
+							bitSet.set(i - 1);
+							termDocFreq[i - 1]++;
 						}
 					}
 					vecMap.put(id, bitSet);
@@ -134,7 +163,7 @@ public class ContentAverageDissimilarity {
 	}
 
 	private double getDissimilarity(SparseVector vec1, SparseVector vec2) {
-		return 1 - ContentUtil.getCosine(vec1, vec2);
+		return 1 - ContentUtil.getSim(vec1, vec2);
 	}
 
 	public double getAverageDissimilarity(Long userId, Long itemId, PreferenceSnapshot snapshot) {

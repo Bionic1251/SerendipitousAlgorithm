@@ -17,7 +17,7 @@ public class RecBrowser {
 		JButton testFileButton = new JButton("Select test file");
 		testFileButton.addActionListener(new TestFileChooserActionListener());
 		fileChooserPanel.add(testFileButton);
-		JButton trainFileButton = new JButton("Select train file");
+		JButton trainFileButton = new JButton("Select trainForEachUser file");
 		trainFileButton.addActionListener(new TrainFileChooserActionListener());
 		fileChooserPanel.add(trainFileButton);
 		JButton outFileButton = new JButton("Select out file");

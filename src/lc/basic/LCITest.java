@@ -16,7 +16,6 @@ import org.grouplens.lenskit.vectors.VectorEntry;
 import pop.PopModel;
 import util.ContentAverageDissimilarity;
 import util.ContentUtil;
-import util.Settings;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -24,9 +23,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LCItemScorer extends AbstractItemScorer {
+public class LCITest extends AbstractItemScorer {
 	private PopModel model;
-	private final ItemScorer itemScorer;
 	private final PreferenceSnapshot snapshot;
 	private final double dissimilarityWeight;
 	private final double unpopWeight;
@@ -34,12 +32,10 @@ public class LCItemScorer extends AbstractItemScorer {
 	private final Map<Long, SparseVector> itemContentMap;
 
 	@Inject
-	public LCItemScorer(PopModel model, @RatingPredictor ItemScorer itemScorer,
-						@Transient @Nonnull PreferenceSnapshot snapshot, @DissimilarityWeight double dissimilarity,
-						@UnpopWeight double unpop, @RelevanceWeight double relevance) {
+	public LCITest(PopModel model, @Transient @Nonnull PreferenceSnapshot snapshot, @DissimilarityWeight double dissimilarity,
+				   @UnpopWeight double unpop, @RelevanceWeight double relevance) {
 		System.out.println("LC R " + relevance + "; D " + dissimilarity + "; U " + unpop);
 		this.model = model;
-		this.itemScorer = itemScorer;
 		this.snapshot = snapshot;
 		dissimilarityWeight = dissimilarity;
 		unpopWeight = unpop;
@@ -65,21 +61,29 @@ public class LCItemScorer extends AbstractItemScorer {
 
 	@Override
 	public void score(long user, @Nonnull MutableSparseVector scores) {
-		MutableSparseVector ratings = scores.copy();
-		itemScorer.score(user, ratings);
-		Normalizer ratingNormalizer = getRatingNormalizer(ratings);
+		//itemScorer.score(user, ratings);
 		Map<Long, Double> unpopMap = getUnpopMap(scores);
 		Normalizer unpopNormalizer = getMapNormalizer(unpopMap);
 		Map<Long, Double> dissimMap = getDissimMap(user, scores);
 		Normalizer dissimNormalizer = getMapNormalizer(dissimMap);
+		double meanDissim = getMean(dissimMap);
+		double maxDiv = Math.max(meanDissim - dissimNormalizer.getMin(), dissimNormalizer.getMax() - meanDissim);
 		for (VectorEntry e : scores.view(VectorEntry.State.EITHER)) {
-			double dissim = dissimNormalizer.norm(dissimMap.get(e.getKey()));
+			double dissim = 1 - Math.abs(meanDissim - dissimMap.get(e.getKey())) / maxDiv;
 			double unpop = unpopNormalizer.norm(unpopMap.get(e.getKey()));
-			double rating = ratingNormalizer.norm(ratings.get(e.getKey()));
-			double total = unpopWeight * unpop + relevanceWeight * rating + dissimilarityWeight * dissim;
+			double total = unpopWeight * unpop + dissimilarityWeight * dissim;
 
 			scores.set(e, total);
 		}
+	}
+
+	private double getMean(Map<Long, Double> dissimMap) {
+		double mean = 0;
+		for (Double item : dissimMap.values()) {
+			mean += item;
+		}
+		mean /= (double) dissimMap.size();
+		return mean;
 	}
 
 	private Normalizer getMapNormalizer(Map<Long, Double> map) {

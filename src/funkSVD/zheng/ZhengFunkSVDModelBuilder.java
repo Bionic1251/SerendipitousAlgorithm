@@ -113,7 +113,6 @@ public class ZhengFunkSVDModelBuilder implements Provider<ZhengFunkSVDModel> {
 	public ZhengFunkSVDModel get() {
 		System.out.println(ZhengSVDModelBuilder.class);
 		populateUserItemMap();
-		popMap = Util.getPopMap(snapshot);
 
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);

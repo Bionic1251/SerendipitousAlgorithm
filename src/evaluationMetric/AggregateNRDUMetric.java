@@ -22,9 +22,9 @@ package evaluationMetric;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.grouplens.lenskit.Recommender;
-import org.grouplens.lenskit.data.dao.UserEventDAO;
 import org.grouplens.lenskit.data.dao.packed.RatingSnapshotDAO;
 import org.grouplens.lenskit.data.event.Event;
 import org.grouplens.lenskit.data.history.RatingVectorUserHistorySummarizer;
@@ -44,12 +44,8 @@ import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.ContentAverageDissimilarity;
-import util.ContentUtil;
-import util.Settings;
+import util.*;
 
-import java.io.File;
-import java.io.PrintWriter;
 import java.util.*;
 
 import static java.lang.Math.log;
@@ -57,18 +53,19 @@ import static java.lang.Math.log;
 /**
  * @author <a href="http://www.grouplens.org">GroupLens Research</a>
  */
-public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulator, AggregateSerendipityNDCGMetric.AggregateResult, AggregateSerendipityNDCGMetric.AggregateResult> {
-	private static final Logger logger = LoggerFactory.getLogger(AggregateSerendipityNDCGMetric.class);
+public class AggregateNRDUMetric extends AbstractMetric<MeanAccumulator, AggregateNRDUMetric.AggregateResult, AggregateNRDUMetric.AggregateResult> {
+	private static final Logger logger = LoggerFactory.getLogger(AggregateNRDUMetric.class);
 
 	private final ItemSelector candidates;
 	private final ItemSelector exclude;
 	private final String prefix;
 	private final String suffix;
-	private SparseVector unpopularityVector;
+	private Map<Long, Double> popMap;
 	private final Map<Long, SparseVector> itemContentMap;
 	private final double relevanceTheshold;
 	private final double unpopTheshold;
 	private final double dissimTheshold;
+	private String dataSetName;
 
 	private MeanAccumulator context1;
 	private MeanAccumulator context5;
@@ -78,16 +75,8 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 	private MeanAccumulator context25;
 	private MeanAccumulator context30;
 
-	/**
-	 * Construct a new nDCG Top-N metric.
-	 *
-	 * @param pre        the prefix label for this evaluation, or {@code null} for no prefix.
-	 * @param sfx        the suffix label for this evaluation, or {@code null} for no suffix.
-	 * @param candidates The candidate selector.
-	 * @param exclude    The exclude selector.
-	 */
-	public AggregateSerendipityNDCGMetric(String pre, String sfx, ItemSelector candidates, ItemSelector exclude,
-										  double threshold, double unpopThreshold, double dissThreshold) {
+	public AggregateNRDUMetric(String pre, String sfx, ItemSelector candidates, ItemSelector exclude,
+							   double threshold, double unpopThreshold, double dissThreshold) {
 		super(AggregateResult.class, AggregateResult.class);
 		suffix = sfx;
 		prefix = pre;
@@ -111,17 +100,26 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		return suffix;
 	}
 
-	private double getVal(Long itemId, Double rating, TestUser user) {
+	private double getVal(Long itemId, Double rating, TestUser user, ThresholdKeeper keeper) {
+		double relevanceTheshold = keeper.rThreshold;
+		double unpopTheshold = keeper.uThreshold;
+		double dissimTheshold = keeper.dThreshold;
+		/*if (ratingThresholds.containsKey(user.getUserId())) {
+			relevanceTheshold = ratingThresholds.get(user.getUserId());
+		}
+		if (dissimThresholds.containsKey(user.getUserId())) {
+			dissimTheshold = dissimThresholds.get(user.getUserId());
+		}
+		if (unpopThresholds.containsKey(user.getUserId())) {
+			unpopTheshold = unpopThresholds.get(user.getUserId());
+		}*/
 		if (rating <= relevanceTheshold) {
 			return 0;
 		}
-		if (!unpopularityVector.containsKey(itemId)) {
-			return 0;
-		}
 		if (user.getTrainHistory() == null || user.getTrainHistory().isEmpty()) {
-			return unpopularityVector.get(itemId);
+			return getUnpop(itemId);
 		}
-		double unpop = unpopularityVector.get(itemId);
+		double unpop = getUnpop(itemId);
 		if (unpop < unpopTheshold) {
 			return 0.0;
 		}
@@ -138,7 +136,7 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		return value;
 	}
 
-	private double computeDCG(List<Long> items, SparseVector values, TestUser user) {
+	private double computeDCG(List<Long> items, SparseVector values, TestUser user, ThresholdKeeper keeper) {
 		final double lg2 = log(2);
 
 		double gain = 0;
@@ -147,7 +145,7 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		Iterator<Long> iit = items.iterator();
 		while (iit.hasNext()) {
 			final Long item = iit.next();
-			double v = getVal(item, values.get(item, 0), user);
+			double v = getVal(item, values.get(item, 0), user, keeper);
 			rank++;
 			if (rank < 2) {
 				gain += v;
@@ -165,26 +163,35 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		if (recommendations == null) {
 			return null;
 		}
-		double ndcg1 = measureUser(user, context1, recommendations, 1);
-		double ndcg5 = measureUser(user, context5, recommendations, 5);
-		double ndcg10 = measureUser(user, context10, recommendations, 10);
-		double ndcg15 = measureUser(user, context15, recommendations, 15);
-		double ndcg20 = measureUser(user, context20, recommendations, 20);
-		double ndcg25 = measureUser(user, context25, recommendations, 25);
-		double ndcg30 = measureUser(user, context30, recommendations, 30);
+		ThresholdKeeper keeper = getKeeper(user);
+		double ndcg1 = measureUser(user, context1, recommendations, 1, keeper);
+		double ndcg5 = measureUser(user, context5, recommendations, 5, keeper);
+		double ndcg10 = measureUser(user, context10, recommendations, 10, keeper);
+		double ndcg15 = measureUser(user, context15, recommendations, 15, keeper);
+		double ndcg20 = measureUser(user, context20, recommendations, 20, keeper);
+		double ndcg25 = measureUser(user, context25, recommendations, 25, keeper);
+		double ndcg30 = measureUser(user, context30, recommendations, 30, keeper);
 		return new AggregateResult(ndcg1, ndcg5, ndcg10, ndcg15, ndcg20, ndcg25, ndcg30);
 	}
 
-	public double measureUser(TestUser user, MeanAccumulator context, List<ScoredId> recommendations, int listSize) {
+	private ThresholdKeeper getKeeper(TestUser user) {
+		ThresholdKeeper keeper = new ThresholdKeeper();
+		keeper.rThreshold = Settings.R_THRESHOLD;//getRatingThreshold(user.getUserId());
+		keeper.dThreshold = getDissimTheshold(user);
+		keeper.uThreshold = getUnpopTheshold(user);
+		return keeper;
+	}
+
+	public double measureUser(TestUser user, MeanAccumulator context, List<ScoredId> recommendations, int listSize, ThresholdKeeper keeper) {
 		if (recommendations.size() > listSize) {
 			recommendations = new ArrayList<ScoredId>(recommendations.subList(0, listSize));
 		}
 		SparseVector ratings = user.getTestRatings();
-		List<Long> ideal = getSortedList(ratings, user);
+		List<Long> ideal = getSortedList(ratings, user, keeper);
 		if (ideal.size() > listSize) {
 			ideal = ideal.subList(0, listSize);
 		}
-		double idealGain = computeDCG(ideal, ratings, user);
+		double idealGain = computeDCG(ideal, ratings, user, keeper);
 		if (idealGain == 0.0) {
 			return 0.0;
 		}
@@ -193,7 +200,7 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		for (ScoredId id : recommendations) {
 			actual.add(id.getId());
 		}
-		double gain = computeDCG(actual, ratings, user);
+		double gain = computeDCG(actual, ratings, user, keeper);
 
 		double score = gain / idealGain;
 
@@ -201,10 +208,10 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		return score;
 	}
 
-	private List<Long> getSortedList(SparseVector ratings, TestUser user) {
+	private List<Long> getSortedList(SparseVector ratings, TestUser user, ThresholdKeeper keeper) {
 		List<Container<Double>> containerList = new ArrayList<Container<Double>>();
 		for (long key : ratings.keySet()) {
-			containerList.add(new Container<Double>(key, getVal(key, ratings.get(key), user)));
+			containerList.add(new Container<Double>(key, getVal(key, ratings.get(key), user, keeper)));
 		}
 		Collections.sort(containerList);
 		Collections.reverse(containerList);
@@ -224,18 +231,141 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 		context20 = new MeanAccumulator();
 		context25 = new MeanAccumulator();
 		context30 = new MeanAccumulator();
+		dataSetName = ds.getTrainingData().getName();
 		updateExpectedItems(ds);
 		return new MeanAccumulator();
 	}
 
 	private void updateExpectedItems(TTDataSet dataSet) {
 		RatingSnapshotDAO.Builder builder = new RatingSnapshotDAO.Builder(dataSet.getTrainingDAO(), false);
-		ItemItemBuildContextProvider itemItemProvider = new ItemItemBuildContextProvider(builder.get(), new DefaultUserVectorNormalizer(), new RatingVectorUserHistorySummarizer());
-		updateSurpriseMap(itemItemProvider.get());
+		ItemItemBuildContextProvider provider = new ItemItemBuildContextProvider(builder.get(), new DefaultUserVectorNormalizer(), new RatingVectorUserHistorySummarizer());
+		updatePopMap(provider.get());
 	}
 
-	private void updateSurpriseMap(ItemItemBuildContext dataContext) {
-		updateUnpopularity(dataContext);
+	private void updatePopMap(ItemItemBuildContext dataContext) {
+		popMap = new HashMap<Long, Double>();
+		Set<Long> userSet = new HashSet<Long>();
+		List<Container<Integer>> popItemContainers = new ArrayList<Container<Integer>>();
+		LongSortedSet itemSet = dataContext.getItems();
+		SparseVector itemVector;
+		int maxVal = 0;
+		for (Long itemId : itemSet) {
+			itemVector = dataContext.itemVector(itemId);
+			maxVal = Math.max(maxVal, itemVector.values().size());
+			popItemContainers.add(new Container(itemId, itemVector.values().size()));
+			userSet.addAll(itemVector.keySet());
+		}
+		for (Container<Integer> container : popItemContainers) {
+			popMap.put(container.getId(), (double) container.getValue() / (double) maxVal);
+		}
+	}
+
+	/*private void updateExpectedItems(TTDataSet dataSet) {
+		RatingSnapshotDAO.Builder builder = new RatingSnapshotDAO.Builder(dataSet.getTrainingDAO(), false);
+		popMap = PrepareUtil.getNormalizedPopMap(Settings.DATASET, "\t");
+		getThresholds(dataSet, builder);
+	}*/
+
+
+	private void getThresholds(TTDataSet dataSet, RatingSnapshotDAO.Builder builder) {
+		//String fileName = dataSet.getTrainingData().getName();
+		//String[] split = fileName.split("\\\\");
+		//fileName = split[split.length - 1];
+		/*MapStorage storage = null;// PrepareUtil.unserrialize(fileName);
+		if (storage != null) {
+			ratingThresholds = storage.getRatingThresholds();
+			dissimThresholds = storage.getDissimThresholds();
+			unpopThresholds = storage.getUnpopThresholds();
+			return;
+		}*/
+		getRatingThresholds(dataSet);
+		getDissimThresholds(builder, dataSet);
+		getUnpopThresholds(builder, dataSet);
+		//storage = new MapStorage(ratingThresholds, dissimThresholds, unpopThresholds);
+		//PrepareUtil.serrialize(storage, fileName);
+	}
+
+	private double getRatingThreshold(Long userId) {
+		Map<Long, Double> ratingThresholds = PrepareUtil.getAverageRatingMap(dataSetName);
+		if (ratingThresholds.containsKey(userId)) {
+			return ratingThresholds.get(userId);
+		}
+		return relevanceTheshold;
+	}
+
+	private void getUnpopThresholds(RatingSnapshotDAO.Builder builder, TTDataSet dataSet) {
+		System.out.println("NRDU metric unpopularity calculation");
+		int i = 0;
+		//unpopThresholds = new HashMap<Long, Double>();
+		LongSet userIdSet = builder.get().getUserIds();
+		for (long userId : userIdSet) {
+			i++;
+			if (i % 100 == 0) {
+				System.out.println(i + " processed");
+			}
+			double unpop = 0;
+			Set<Long> itemSet = PrepareUtil.getUserProfile(dataSet.getTrainingData().getName(), userId);
+			for (long item : itemSet) {
+				unpop += getUnpop(item);
+			}
+			unpop /= itemSet.size();
+			//unpopThresholds.put(userId, unpop);
+		}
+	}
+
+	private double getUnpopTheshold(TestUser user) {
+		double unpop = 0;
+		UserHistory<Event> eventSet = user.getTrainHistory();
+		for (Event event : eventSet) {
+			unpop += getUnpop(event.getItemId());
+		}
+		unpop /= eventSet.size();
+		return unpop;
+	}
+
+	private double getUnpop(long itemId) {
+		if (!popMap.containsKey(itemId)) {
+			return 1;
+		}
+		return 1 - popMap.get(itemId);
+	}
+
+	private double getDissimTheshold(TestUser user) {
+		double dissim = 0;
+		UserHistory<Event> userHistory = user.getTrainHistory();
+		Set<Long> itemSet = new HashSet<Long>();
+		for (Event event : userHistory) {
+			itemSet.add(event.getItemId());
+		}
+		for (Long item : itemSet) {
+			dissim += getAverageDissimilarity(itemSet, item);
+		}
+		dissim /= itemSet.size();
+		return dissim;
+	}
+
+	private void getDissimThresholds(RatingSnapshotDAO.Builder builder, TTDataSet dataSet) {
+		System.out.println("NRDU metric dissimilarity calculation");
+		int i = 0;
+		//dissimThresholds = new HashMap<Long, Double>();
+		LongSet userIdSet = builder.get().getUserIds();
+		for (long userId : userIdSet) {
+			double dissim = 0;
+			i++;
+			if (i % 100 == 0) {
+				System.out.println(i + " processed");
+			}
+			Set<Long> itemSet = PrepareUtil.getUserProfile(dataSet.getTrainingData().getName(), userId);
+			for (long item : itemSet) {
+				dissim += getAverageDissimilarity(itemSet, item);
+			}
+			dissim /= itemSet.size();
+			//dissimThresholds.put(userId, dissim);
+		}
+	}
+
+	private void getRatingThresholds(TTDataSet dataSet) {
+		//ratingThresholds = PrepareUtil.getAverageRatingMap(dataSet.getTrainingData().getName());
 	}
 
 	/*private void updateDissimilarity(ItemItemBuildContext dataContext) {
@@ -258,28 +388,9 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 	private double getAverageDissimilarity(Collection<Long> ratedItems, Long itemId) {
 		double avgSim = 0.0;
 		for (Long ratedItemId : ratedItems) {
-			avgSim += 1 - ContentUtil.getCosine(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
+			avgSim += 1 - ContentUtil.getSim(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
 		}
 		return avgSim / ratedItems.size();
-	}
-
-	private void updateUnpopularity(ItemItemBuildContext dataContext) {
-		Set<Long> userSet = new HashSet<Long>();
-		LongSortedSet itemSet = dataContext.getItems();
-		SparseVector itemVector;
-		MutableSparseVector userVector = MutableSparseVector.create(itemSet);
-		double maxPop = 0;
-		for (Long itemId : itemSet) {
-			itemVector = dataContext.itemVector(itemId);
-			userVector.set(itemId, (double) itemVector.values().size());
-			maxPop = Math.max(maxPop, itemVector.values().size());
-			userSet.addAll(itemVector.keySet());
-		}
-		for (Long id : userVector.keySet()) {
-			double normVal = 1 - userVector.get(id) / maxPop;
-			userVector.set(id, normVal);
-		}
-		unpopularityVector = userVector;
 	}
 
 	@Override
@@ -318,6 +429,12 @@ public class AggregateSerendipityNDCGMetric extends AbstractMetric<MeanAccumulat
 			this.nDCG25 = nDCG25;
 			this.nDCG30 = nDCG30;
 		}
+	}
+
+	private class ThresholdKeeper {
+		private double rThreshold;
+		private double dThreshold;
+		private double uThreshold;
 	}
 
 }

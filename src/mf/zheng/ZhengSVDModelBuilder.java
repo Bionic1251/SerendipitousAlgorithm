@@ -20,6 +20,7 @@ import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pop.PopModel;
 import util.*;
 
 import javax.annotation.Nonnull;
@@ -37,20 +38,21 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
 	protected final double initialValue;
-	private Map<Integer, Double> popMap;
+	private PopModel popModel;
 	private Map<Long, SparseVector> userItemDissimilarityMap;
 
 	@Inject
 	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								@FeatureCount int featureCount,
 								@InitialFeatureValue double initVal, @LearningRate double lrate,
-								@RegularizationTerm double reg, StoppingCondition stop) {
+								@RegularizationTerm double reg, StoppingCondition stop, PopModel popModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
 		learningRate = lrate;
 		regularization = reg;
 		stoppingCondition = stop;
+		this.popModel = popModel;
 	}
 
 	@Override
@@ -58,7 +60,6 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		System.out.println(ZhengSVDModelBuilder.class);
 		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
 		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
-		popMap = Util.getPopMap(snapshot);
 
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);
@@ -127,7 +128,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 				dissimilarity = itemDissimilarityVector.get(itemId);
 			}
 		}
-		double w = 1 - popMap.get(itemIndex) + dissimilarity;
+		double w = 1 - popModel.getPop(itemId) / popModel.getMax() + dissimilarity;
 		double error = (rating - prediction) * w;
 		if (Double.isNaN(error) || Double.isInfinite(error)) {
 			System.out.printf("Error is " + error);
@@ -183,7 +184,7 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 				dissimilarity = itemDissimilarityVector.get(itemId);
 			}
 		}
-		double w = 1 - popMap.get(itemIndex) + dissimilarity;
+		double w = 1 - popModel.getPop(itemId) / popModel.getMax() + dissimilarity;
 		double error = (rating - prediction) * w;
 
 		return Math.abs(error);

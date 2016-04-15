@@ -2,6 +2,7 @@ package lc.investigation;
 
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import org.grouplens.lenskit.basic.AbstractItemScorer;
+import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
@@ -10,54 +11,88 @@ import util.AverageAggregate;
 import util.ContentAverageDissimilarity;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.Map;
 
 public abstract class InvestigationItemScorer extends AbstractItemScorer {
+	protected double serR;
+	protected double serD;
+	protected double serU;
+	protected double unserR;
+	protected double unserD;
+	protected double unserU;
+
 	protected final PopModel popModel;
 	protected final PreferenceSnapshot snapshot;
 	protected final Map<Long, SparseVector> userItemDissimilarityMap;
 	protected final Map<Long, AverageAggregate> userThresholdMap;
+	private PrintWriter printWriter;
 
-	protected static final double LEARNING_RATE = 0.0001;
-	protected static final double P_COEFF = 0.001;
-	protected final int iterationCount;
-	protected static final double DEFAULT_VAL = 0.33;
-
-	public InvestigationItemScorer(PopModel popModel, PreferenceSnapshot snapshot, int ic) {
-		init();
-		iterationCount = ic;
+	public InvestigationItemScorer(PopModel popModel, PreferenceSnapshot snapshot, String filename) {
 		this.popModel = popModel;
 		this.snapshot = snapshot;
 		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
 		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
 		userThresholdMap = contentAverageDissimilarity.getAverageMap(snapshot, popModel, userItemDissimilarityMap);
+		try {
+			printWriter = new PrintWriter(new File(filename));
+			printWriter.println("userId\tprofileSize\twr\twd\twu\tserR\tserD\tserU\tunserR\tunserD\tunserU");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 		train();
 	}
 
-	protected void init() {
+	protected void print(long userId, int profileSize, WeightTriple triple, double serR, double serD, double serU, double unserR, double unserD, double unserU) {
+		String s = "\t";
+		printWriter.println(userId + s + profileSize + s + triple.getWr() + s + triple.getWd() + s + triple.getWu() + s + serR + s + serD + s + serU + s + unserR + s + unserD + s + unserU);
+	}
+
+	protected void close() {
+		printWriter.close();
 	}
 
 	protected void train() {
-		System.out.println(InvestigationItemScorer.class);
-		for (int i = 0; i < iterationCount; i++) {
-			System.out.println("Iteration " + i);
-			printWeights();
-			printFunctionForEachUser();
-			trainParameters();
-		}
-	}
-
-	protected abstract void printWeights();
-
-	private void trainParameters() {
 		LongCollection userIds = snapshot.getUserIds();
 		for (long userId : userIds) {
-			trainForEachUser(userId);
+			countForEachUser(userId);
 		}
 	}
 
-	protected abstract void trainForEachUser(long userId);
+	protected void countForEachUser(Long userId) {
+		Collection<IndexedPreference> prefs = snapshot.getUserRatings(userId);
+		AverageAggregate aggregate = userThresholdMap.get(userId);
+		for (IndexedPreference innerPref : prefs) {
+			for (IndexedPreference outerPref : prefs) {
+				if (innerPref.getItemId() == outerPref.getItemId()) {
+					continue;
+				}
+				Triple innerTriple = new Triple(userId, innerPref.getItemId(), innerPref.getValue(), aggregate);
+				Triple outerTriple = new Triple(userId, outerPref.getItemId(), outerPref.getValue(), aggregate);
+				boolean innerSer = isSerendipitous(innerTriple, aggregate);
+				boolean outerSer = isSerendipitous(outerTriple, aggregate);
+				if (!innerSer && outerSer) {
+					sumParameters(outerTriple, innerTriple);
+				} else {
+					if (innerSer && !outerSer) {
+						sumParameters(innerTriple, outerTriple);
+					}
+				}
+			}
+		}
+	}
+
+	private void sumParameters(Triple serTriple, Triple unserTriple) {
+		serR += serTriple.rating;
+		serD += serTriple.dissimilarity;
+		serU += serTriple.unpopularity;
+		unserR += unserTriple.rating;
+		unserD += unserTriple.dissimilarity;
+		unserU += unserTriple.unpopularity;
+	}
 
 	protected boolean isSerendipitous(Triple triple, AverageAggregate aggregate) {
 		if (triple.rating <= aggregate.getR().getThreshold()) {
@@ -82,17 +117,6 @@ public abstract class InvestigationItemScorer extends AbstractItemScorer {
 		}
 		return vector.get(itemId);
 	}
-
-	protected void printFunctionForEachUser() {
-		LongCollection userIds = snapshot.getUserIds();
-		double sum = 0;
-		for (long userId : userIds) {
-			sum += getFunctionVal(userId);
-		}
-		System.out.println("Function " + sum);
-	}
-
-	protected abstract double getFunctionVal(long userId);
 
 	protected class Triple {
 		protected double rating;

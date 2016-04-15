@@ -7,171 +7,79 @@ import org.grouplens.lenskit.scored.ScoredId;
 import util.AlgorithmUtil;
 import util.ContentAverageDissimilarity;
 import util.Settings;
+import util.Util;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 public class RecommenderRunner {
 	public static void main(String args[]) throws Exception {
-		setParameters();
+		Util.setParameters();
 		ContentAverageDissimilarity.create(Settings.DATASET_CONTENT);
-		PrintWriter datasetWriter = new PrintWriter(new File("res.txt"));
+		PrintWriter writer = new PrintWriter(new File("res.txt"));
 
-		List<ScoredId> pop = getRecs(AlgorithmUtil.getPop());
-		datasetWriter.println("Pop");
-		datasetWriter.println(pop);
+		List<Long> userList = new ArrayList<Long>();
+		userList.add(75l);
+		userList.add(78l);
+		userList.add(170l);
+		/*for (long i = 100029l; i < 100033l; i++) {
+			userList.add(i);
+		}
+		userList.add(100040l);*/
+		getRecommendations(userList, writer);
 
-		List<ScoredId> svd = getRecs(AlgorithmUtil.getSVD());
-		datasetWriter.println("SVD");
-		datasetWriter.println(svd);
-
-		List<ScoredId> lcSVD = getRecs(AlgorithmUtil.getLCSVD());
-		datasetWriter.println("lcSVD");
-		datasetWriter.println(lcSVD);
-
-		List<ScoredId> random = getRecs(AlgorithmUtil.getRandom());
-		datasetWriter.println("Random");
-		datasetWriter.println(random);
-
-		List<ScoredId> pureSVD = getRecs(AlgorithmUtil.getPureSVD());
-		datasetWriter.println("PureSVD");
-		datasetWriter.println(pureSVD);
-
-		List<ScoredId> zheng = getRecs(AlgorithmUtil.getZhengSVDContent());
-		datasetWriter.println("Zheng");
-		datasetWriter.println(zheng);
-
-		List<ScoredId> spr = getRecs(AlgorithmUtil.getLuSVDHinge10000());
-		datasetWriter.println("SPR");
-		datasetWriter.println(spr);
-
-		System.out.println("SVD");
-		System.out.println(svd);
-		System.out.println("PureSVD");
-		System.out.println(pureSVD);
-
-		System.out.println("LCSVD");
-		System.out.println(lcSVD);
-		System.out.println("SPR");
-		System.out.println(spr);
-		System.out.println("Zheng");
-		System.out.println(zheng);
-		System.out.println("Pop");
-		System.out.println(pop);
-		System.out.println("Random");
-		System.out.println(random);
-		datasetWriter.close();
+		writer.close();
 	}
 
-	private static List<ScoredId> getRecs(LenskitConfiguration configuration) throws Exception {
+	private static void getRecommendations(List<Long> userList, PrintWriter writer) throws Exception {
+		//printRecs(AlgorithmUtil.getFunkSVD(), userList, writer, "FunkSVD");
+		printRecs(AlgorithmUtil.getSVD(), userList, writer, "SVD");
+		//printRecs(AlgorithmUtil.getSerPop(), userList, writer, "SerPop");
+		//printRecs(AlgorithmUtil.getSerUB(), userList, writer, "SerUB");
+		//printRecs(AlgorithmUtil.getSerTFIDF(), userList, writer, "SerTFIDF");
+		//printRecs(AlgorithmUtil.getSerContent(), userList, writer, "SerContent");
+		//printRecs(AlgorithmUtil.getTFIDF(), userList, writer, "tfidf");
+		//printRecs(AlgorithmUtil.getContent(), userList, writer, "Content");
+		//printRecs(AlgorithmUtil.getCompletelyRandom(), userList, writer, "Random");
+		//printRecs(AlgorithmUtil.getSVD(), userList, writer, "SVD");
+		//printRecs(AlgorithmUtil.getLCRDU(), userList, writer, "LCRDU");
+		//printRecs(AlgorithmUtil.getLCRD(), userList, writer, "LCRD");
+		//printRecs(AlgorithmUtil.getLCRU(), userList, writer, "LCRU");
+		//printRecs(AlgorithmUtil.getLuSVDHinge10000(), userList, writer, "SPR");
+		//printRecs(AlgorithmUtil.getZhengSVDContent(), userList, writer, "Zheng");
+
+		/*System.out.println("PureSVD");
+		writer.println("PureSVD");
+		printRecs(AlgorithmUtil.getPureSVD(), userList, writer);*/
+
+		/*System.out.println("Random");
+		writer.println("Random");
+		printRecs(AlgorithmUtil.getRandom(), userList, writer);*/
+
+		/*System.out.println("SPR");
+		writer.println("SPR");
+		printRecs(AlgorithmUtil.getLuSVDHinge10000(), userList, writer);*/
+	}
+
+	private static void printRecs(LenskitConfiguration configuration, List<Long> userList, PrintWriter writer, String algName) throws Exception {
 		configuration.bind(EventDAO.class).to(new SimpleFileRatingDAO(new File(Settings.DATASET), "\t"));
 		LenskitRecommender pop = LenskitRecommender.build(configuration);
 		ItemRecommender itemRecommender = pop.getItemRecommender();
-		List<ScoredId> recs = itemRecommender.recommend(100000l, 10);
-		return recs;
-	}
-
-	private static void setParameters() {
-		Properties prop = new Properties();
-		InputStream input = null;
-
-		try {
-			input = new FileInputStream("config.properties");
-			prop.load(input);
-
-			Settings.DATASET = (String) prop.get("dataset");
-			System.out.println("dataset " + Settings.DATASET);
-
-			Settings.DATASET_CONTENT = (String) prop.get("dataset_content");
-			System.out.println("dataset_content " + Settings.DATASET_CONTENT);
-
-			Settings.MIN = Double.valueOf((String) prop.get("min_rating"));
-			System.out.println("min_rating " + Settings.MIN);
-
-			Settings.MAX = Double.valueOf((String) prop.get("max_rating"));
-			System.out.println("max_rating " + Settings.MAX);
-
-			Settings.CROSSFOLD_NUMBER = Integer.valueOf((String) prop.get("crossfold"));
-			System.out.println("crossfold " + Settings.CROSSFOLD_NUMBER);
-
-			Settings.HOLDOUT_NUMBER = Integer.valueOf((String) prop.get("holdout"));
-			System.out.println("holdout " + Settings.HOLDOUT_NUMBER);
-
-			Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER = Integer.valueOf((String) prop.get("popular_items_number"));
-			System.out.println("popular_items_number " + Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER);
-
-			Settings.RANDOM_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("random_items_candidates"));
-			System.out.println("random_items_candidates " + Settings.RANDOM_ITEMS_FOR_CANDIDATES);
-
-			Settings.POPULAR_ITEMS_FOR_CANDIDATES = Integer.valueOf((String) prop.get("popular_items_candidates"));
-			System.out.println("popular_items_candidates " + Settings.POPULAR_ITEMS_FOR_CANDIDATES);
-
-			Settings.TRAIN_TEST_FOLDER_NAME = (String) prop.get("train_folder");
-			System.out.println("train_folder " + Settings.TRAIN_TEST_FOLDER_NAME);
-
-			Settings.OUTPUT_PATH = (String) prop.get("output");
-			System.out.println("output " + Settings.OUTPUT_PATH);
-
-			Settings.OUTPUT_USER_PATH = (String) prop.get("output_user");
-			System.out.println("output_user " + Settings.OUTPUT_USER_PATH);
-
-			Settings.OUTPUT_ITEM_PATH = (String) prop.get("outout_item");
-			System.out.println("outout_item " + Settings.OUTPUT_ITEM_PATH);
-
-			Settings.R_THRESHOLD = Double.valueOf((String) prop.get("r_threshold"));
-			System.out.println("r_threshold " + Settings.R_THRESHOLD);
-
-			Settings.D_THRESHOLD = Double.valueOf((String) prop.get("d_threshold"));
-			System.out.println("d_threshold " + Settings.D_THRESHOLD);
-
-			Settings.U_THRESHOLD = Double.valueOf((String) prop.get("u_threshold"));
-			System.out.println("u_threshold " + Settings.U_THRESHOLD);
-
-			Settings.FEATURE_COUNT = Integer.valueOf((String) prop.get("feature_count"));
-			System.out.println("feature_count " + Settings.FEATURE_COUNT);
-
-			Settings.ITERATION_COUNT_SVD = Integer.valueOf((String) prop.get("iteration_count_svd"));
-			System.out.println("iteration_count_svd " + Settings.ITERATION_COUNT_SVD);
-
-			Settings.ITERATION_COUNT_PURE_SVD = Integer.valueOf((String) prop.get("iteration_count_pure_svd"));
-			System.out.println("iteration_count_pure_svd " + Settings.ITERATION_COUNT_PURE_SVD);
-
-			Settings.ITERATION_COUNT_SPR = Integer.valueOf((String) prop.get("iteration_count_spr"));
-			System.out.println("iteration_count_spr " + Settings.ITERATION_COUNT_SPR);
-
-			Settings.LEARNING_RATE = Double.valueOf((String) prop.get("learning_rate"));
-			System.out.println("learning_rate " + Settings.LEARNING_RATE);
-
-			Settings.REGULARIZATION_TERM = Double.valueOf((String) prop.get("regularization_term"));
-			System.out.println("regularization_term " + Settings.REGULARIZATION_TERM);
-
-			Settings.ZHENG_LEARNING_RATE = Double.valueOf((String) prop.get("zheng_learning_rate"));
-			System.out.println("zheng_learning_rate " + Settings.ZHENG_LEARNING_RATE);
-
-			Settings.ZHENG_REGULARIZATION_TERM = Double.valueOf((String) prop.get("zheng_regularization_term"));
-			System.out.println("zheng_regularization_term " + Settings.ZHENG_REGULARIZATION_TERM);
-
-			Settings.ALPHA = Double.valueOf((String) prop.get("alpha"));
-			System.out.println("alpha " + Settings.ALPHA);
-
-			Settings.LU_LEARNING_RATE = Double.valueOf((String) prop.get("lu_learning_rate"));
-			System.out.println("lu_learning_rate " + Settings.LU_LEARNING_RATE);
-
-			Settings.LU_REGULARIZATION_TERM = Double.valueOf((String) prop.get("lu_regularization_term"));
-			System.out.println("lu_regularization_term " + Settings.LU_REGULARIZATION_TERM);
-
-		} catch (IOException io) {
-			io.printStackTrace();
-		} finally {
-			if (input != null) {
-				try {
-					input.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+		String out = "";
+		for (Long userId : userList) {
+			out += algName + "\t" + userId;
+			List<ScoredId> recs = itemRecommender.recommend(userId, 3000);
+			out += "\t";
+			for (ScoredId scoredId : recs) {
+				out += scoredId.getId() + "=" + scoredId.getScore() + ",";
 			}
-
+			out = out.substring(0, out.length() - 1);
+			out += "\r\n";
 		}
+		System.out.print(out);
+		writer.print(out);
 	}
+
 }

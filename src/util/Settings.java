@@ -32,4 +32,7 @@ public class Settings {
 
 	public static double LU_LEARNING_RATE;
 	public static double LU_REGULARIZATION_TERM;
+
+	public static double FRACTION;
+	public static double GENRES_NUMBER;
 }

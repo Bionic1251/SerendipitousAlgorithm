@@ -16,7 +16,24 @@ import java.util.*;
 public class ContentUtil {
 	private static int[] termDocFreq;
 
-	public static double getCosine(SparseVector vector1, SparseVector vector2) {
+	public static double getJaccard(SparseVector vector1, SparseVector vector2) {
+		if (vector1 == null || vector2 == null) {
+			return 0.0;
+		}
+		int intersection = 0;
+		for (long item : vector1.keySet()) {
+			if (vector2.containsKey(item)) {
+				intersection++;
+			}
+		}
+		if (intersection == 0) {
+			return 0.0;
+		}
+		int union = vector1.size() + vector2.size() - intersection;
+		return (double) intersection / (double) union;
+	}
+
+	public static double getCos(SparseVector vector1, SparseVector vector2) {
 		if (vector1 == null || vector2 == null) {
 			return 0.0;
 		}
@@ -26,6 +43,10 @@ public class ContentUtil {
 			return 0.0;
 		}
 		return dot / denom;
+	}
+
+	public static double getSim(SparseVector vector1, SparseVector vector2) {
+		return getJaccard(vector1, vector2);
 	}
 
 	public static SparseVector getUserSparseVector(UserHistory<Event> events, Map<Long, SparseVector> itemContentMap) {

@@ -7,7 +7,6 @@ import org.grouplens.lenskit.ItemScorer;
 import org.grouplens.lenskit.core.Transient;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
-import org.grouplens.lenskit.knn.item.model.ItemItemModel;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import pop.PopModel;
@@ -207,7 +206,7 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		}
 		SparseVector vec1 = itemMap.get(itemId1);
 		SparseVector vec2 = itemMap.get(itemId2);
-		double sim = ContentUtil.getCosine(vec1, vec2);
+		double sim = ContentUtil.getSim(vec1, vec2);
 		return 1 - sim;
 	}
 }

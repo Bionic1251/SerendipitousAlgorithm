@@ -1,16 +1,10 @@
 package evaluationMetric;
 
-import it.unimi.dsi.fastutil.longs.LongCollection;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import it.unimi.dsi.fastutil.longs.LongSortedSet;
-import online.Rating;
 import org.grouplens.lenskit.Recommender;
-import org.grouplens.lenskit.cursors.Cursor;
-import org.grouplens.lenskit.data.dao.packed.RatingSnapshotDAO;
 import org.grouplens.lenskit.data.event.Event;
-import org.grouplens.lenskit.data.event.MutableRating;
-import org.grouplens.lenskit.data.history.RatingVectorUserHistorySummarizer;
 import org.grouplens.lenskit.data.history.UserHistory;
+import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.eval.Attributed;
 import org.grouplens.lenskit.eval.data.traintest.TTDataSet;
 import org.grouplens.lenskit.eval.metrics.AbstractMetric;
@@ -18,29 +12,29 @@ import org.grouplens.lenskit.eval.metrics.ResultColumn;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
 import org.grouplens.lenskit.eval.traintest.TestUser;
-import org.grouplens.lenskit.knn.item.model.ItemItemBuildContext;
-import org.grouplens.lenskit.knn.item.model.ItemItemBuildContextProvider;
 import org.grouplens.lenskit.scored.ScoredId;
-import org.grouplens.lenskit.transform.normalize.DefaultUserVectorNormalizer;
 import org.grouplens.lenskit.util.statistics.MeanAccumulator;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.hamcrest.Matchers;
+import util.ContentAverageDissimilarity;
 import util.PrepareUtil;
 import util.Settings;
 
 import java.util.*;
 
 
-public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, AggregatePopSerendipityTopNMetric.AggregateResult, AggregatePopSerendipityTopNMetric.AggregateResult> {
-	protected Map<Long, Set<Long>> expectedMap;
+public class AggregateGenresSerendipityTopNMetric extends AbstractMetric<MeanAccumulator, AggregateGenresSerendipityTopNMetric.AggregateResult, AggregateGenresSerendipityTopNMetric.AggregateResult> {
+	/*protected Map<Long, Set<Long>> expectedMap;
 	protected List<Container<Double>> expectedItemContainers;
 	private Set<Long> defaultExpectedItems;
-	protected final int expectedItemsNumber;
+	protected final int expectedItemsNumber;*/
 	private final ItemSelector goodItems;
 	private final ItemSelector candidates;
 	private final ItemSelector exclude;
 	private final String suffix;
 	private String dataSetName;
+	Map<Long, Set<Long>> popMap;
 	//private Map<Long, Double> ratingThresholds;
 
 	private MeanAccumulator context1;
@@ -51,13 +45,40 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 	private MeanAccumulator context25;
 	private MeanAccumulator context30;
 
-	public AggregatePopSerendipityTopNMetric(String suffix, int number, ItemSelector candidates, ItemSelector exclude, ItemSelector goodItems) {
+	public AggregateGenresSerendipityTopNMetric(String suffix, int number, ItemSelector candidates, ItemSelector exclude, ItemSelector goodItems) {
 		super(AggregateResult.class, AggregateResult.class);
 		this.goodItems = goodItems;
 		this.suffix = suffix;
-		expectedItemsNumber = number;
+		//expectedItemsNumber = number;
 		this.candidates = candidates;
 		this.exclude = exclude;
+		updatePopMap();
+	}
+
+	private void updatePopMap() {
+		Map<Long, Double> normPopMap = PrepareUtil.getNormalizedPopMap(Settings.DATASET, "\t");
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> map = dissimilarity.getItemContentMap();
+		Collection<Long> keySet = dissimilarity.getEmptyVector().keySet();
+		popMap = new HashMap<Long, Set<Long>>();
+		for (long key : keySet) {
+			List<Long> items = getItemsByGenre(key, map);
+			List<Container<Double>> containerList = new ArrayList<Container<Double>>();
+			for (long itemId : items) {
+				if (normPopMap.containsKey(itemId)) {
+					containerList.add(new Container<Double>(itemId, normPopMap.get(itemId)));
+				}
+			}
+			Collections.sort(containerList);
+			Collections.reverse(containerList);
+			int frac = (int) (Settings.FRACTION * (double) containerList.size());
+			containerList = containerList.subList(0, frac);
+			Set<Long> popSet = new HashSet<Long>();
+			for (Container<Double> container : containerList) {
+				popSet.add(container.getId());
+			}
+			popMap.put(key, popSet);
+		}
 	}
 
 	@Override
@@ -78,18 +99,46 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 			context30.add(0.0);
 			return null;
 		}
+		SparseVector userVector = getUserVector(user);
+		Set<Long> genres = getGenres(userVector);
 		double threshold = Settings.R_THRESHOLD;//getRaitingThreshold(user.getUserId());
-		double ser1 = measureUser(user, context1, recommendations, 1, threshold);
-		double ser5 = measureUser(user, context5, recommendations, 5, threshold);
-		double ser10 = measureUser(user, context10, recommendations, 10, threshold);
-		double ser15 = measureUser(user, context15, recommendations, 15, threshold);
-		double ser20 = measureUser(user, context20, recommendations, 20, threshold);
-		double ser25 = measureUser(user, context25, recommendations, 25, threshold);
-		double ser30 = measureUser(user, context30, recommendations, 30, threshold);
+		double ser1 = measureUser(user, context1, recommendations, 1, threshold, genres);
+		double ser5 = measureUser(user, context5, recommendations, 5, threshold, genres);
+		double ser10 = measureUser(user, context10, recommendations, 10, threshold, genres);
+		double ser15 = measureUser(user, context15, recommendations, 15, threshold, genres);
+		double ser20 = measureUser(user, context20, recommendations, 20, threshold, genres);
+		double ser25 = measureUser(user, context25, recommendations, 25, threshold, genres);
+		double ser30 = measureUser(user, context30, recommendations, 30, threshold, genres);
 		return new AggregateResult(ser1, ser5, ser10, ser15, ser20, ser25, ser30, 1);
 	}
 
-	protected double measureUser(TestUser user, MeanAccumulator context, List<ScoredId> recommendations, int listSize, double threshold) {
+	private SparseVector getUserVector(TestUser user) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> map = dissimilarity.getItemContentMap();
+		MutableSparseVector vector = dissimilarity.getEmptyVector();
+		for (long item : user.getTrainHistory().itemSet()) {
+			SparseVector itemVector = map.get(item);
+			vector.add(itemVector);
+		}
+		return vector;
+	}
+
+	private Set<Long> getGenres(SparseVector userVector) {
+		Set<Long> newFeatures = new HashSet<Long>();
+		List<Container<Double>> list = new ArrayList<Container<Double>>();
+		for (long key : userVector.keySet()) {
+			list.add(new Container<Double>(key, userVector.get(key)));
+		}
+		Collections.sort(list);
+		for (int i = 0; i < list.size(); i++) {
+			if (i < Settings.GENRES_NUMBER || list.get(i).getValue() == 0.0) {
+				newFeatures.add(list.get(i).getId());
+			}
+		}
+		return newFeatures;
+	}
+
+	protected double measureUser(TestUser user, MeanAccumulator context, List<ScoredId> recommendations, int listSize, double threshold, Set<Long> genres) {
 		if (recommendations.size() > listSize) {
 			recommendations = new ArrayList<ScoredId>(recommendations.subList(0, listSize));
 		}
@@ -103,7 +152,7 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 		Set<Long> serendipitousItems = new HashSet<Long>();
 		SparseVector ratings = user.getTestRatings();
 		for (Long key : ratings.keySet()) {
-			if (goodItems.contains(key) && !getExpectedItems(user.getUserId()).contains(key)) {
+			if (goodItems.contains(key) && !isPop(key) && hasGenre(genres, key)) {
 				serendipitousItems.add(key);
 			}
 		}
@@ -120,6 +169,27 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 		double value = (double) serendipityCount / listSize;
 		context.add(value);
 		return value;
+	}
+
+	private boolean isPop(long itemId) {
+		for (long key : popMap.keySet()) {
+			if (popMap.get(key).contains(itemId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean hasGenre(Set<Long> genres, long itemId) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> map = dissimilarity.getItemContentMap();
+		SparseVector vector = map.get(itemId);
+		for (long key : vector.keySet()) {
+			if (vector.get(key) != 0 && genres.contains(key)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -144,10 +214,21 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 		context20 = new MeanAccumulator();
 		context25 = new MeanAccumulator();
 		context30 = new MeanAccumulator();
-		updateExpectedItems(dataSet);
+		//updateExpectedItems(dataSet);
+		//updatePopMap(dataSet);
 		dataSetName = dataSet.getTrainingData().getName();
 		//getRatingThresholds(dataSet);
 		return new MeanAccumulator();
+	}
+
+	private LinkedList<Long> getItemsByGenre(long genre, Map<Long, SparseVector> map) {
+		LinkedList<Long> list = new LinkedList<Long>();
+		for (Map.Entry<Long, SparseVector> entry : map.entrySet()) {
+			if (entry.getValue().containsKey(genre)) {
+				list.add(entry.getKey());
+			}
+		}
+		return list;
 	}
 
 	private double getRaitingThreshold(long userId) {
@@ -162,7 +243,7 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 		//ratingThresholds = PrepareUtil.getAverageRatingMap(dataSet.getTrainingData().getName());
 	}
 
-	private void updateExpectedItems(TTDataSet dataSet) {
+	/*private void updateExpectedItems(TTDataSet dataSet) {
 		defaultExpectedItems = new HashSet<Long>();
 		expectedMap = new HashMap<Long, Set<Long>>();
 		Set<Long> expectedItems = new HashSet<Long>();
@@ -188,31 +269,31 @@ public class AggregatePopSerendipityTopNMetric extends AbstractMetric<MeanAccumu
 			return expectedMap.get(userId);
 		}
 		return defaultExpectedItems;
-	}
+	}*/
 
 	public static class AggregateResult {
-		@ResultColumn("Serendipity1")
+		@ResultColumn("SerendipityGenres1")
 		public final double ser1;
 
-		@ResultColumn("Serendipity5")
+		@ResultColumn("SerendipityGenres5")
 		public final double ser5;
 
-		@ResultColumn("Serendipity10")
+		@ResultColumn("SerendipityGenres10")
 		public final double ser10;
 
-		@ResultColumn("Serendipity15")
+		@ResultColumn("SerendipityGenres15")
 		public final double ser15;
 
-		@ResultColumn("Serendipity20")
+		@ResultColumn("SerendipityGenres20")
 		public final double ser20;
 
-		@ResultColumn("Serendipity25")
+		@ResultColumn("SerendipityGenres25")
 		public final double ser25;
 
-		@ResultColumn("Serendipity30")
+		@ResultColumn("SerendipityGenres30")
 		public final double ser301;
 
-		@ResultColumn("SerendipityCount")
+		@ResultColumn("SerendipityGenresCount")
 		public final long count;
 
 		public AggregateResult(double ser1, double ser5, double ser10, double ser15, double ser20, double ser25, double ser301, long count) {

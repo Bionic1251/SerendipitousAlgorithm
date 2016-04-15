@@ -48,7 +48,7 @@ public abstract class LuFunkSVDUpdateRule implements Serializable {
 
 	public double getNextStep(double a, double pop, double diff, double value) {
 		double update = getUpdate(a, pop, diff, value);
-		double newVal = value + getUpdate(a, pop, diff, value);
+		double newVal = value + update;
 		if (Double.isNaN(newVal) || Double.isInfinite(newVal) || !isInRange(newVal)) {
 			return 0.0;
 		}

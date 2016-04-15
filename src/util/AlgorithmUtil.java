@@ -2,15 +2,18 @@ package util;
 
 import adamopoulos.AdaItemScorer;
 import annotation.*;
+import content.ContentItemScorer;
+import content.SerContentItemScorer;
 import funkSVD.lu.LuFunkSVDItemScorer;
 import funkSVD.lu.LuUpdateRule;
 import funkSVD.lu.LuUpdateRuleBaysian;
 import funkSVD.lu.LuUpdateRuleHinge;
 import funkSVD.zheng.ZhengFunkSVDItemScorer;
 import lc.advanced.LCAdvancedItemScorer;
+import lc.basic.LCITest;
 import lc.basic.LCItemScorer;
 import lc.investigation.NonPersInvestigationItemScorer;
-import lc.investigation_per_user.InvestigationPerUserItemScorer;
+import lc.investigation.PersInvestigationItemScorer;
 import mf.baseline.SVDItemScorer;
 import mf.lu.LuSVDItemScorer;
 import mf.pureSVD.PureSVDItemScorer;
@@ -26,11 +29,13 @@ import org.grouplens.lenskit.iterative.LearningRate;
 import org.grouplens.lenskit.iterative.RegularizationTerm;
 import org.grouplens.lenskit.knn.NeighborhoodSize;
 import org.grouplens.lenskit.knn.item.ItemItemScorer;
+import org.grouplens.lenskit.knn.user.UserUserItemScorer;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FunkSVDItemScorer;
 import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
 import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import pop.PopItemScorer;
+import random.CompletelyRandomItemScorer;
 import random.RandomItemScorer;
 
 import java.util.HashMap;
@@ -41,6 +46,12 @@ public class AlgorithmUtil {
 	public static LenskitConfiguration getRandom() {
 		LenskitConfiguration rnd = new LenskitConfiguration();
 		rnd.bind(ItemScorer.class).to(RandomItemScorer.class);
+		return rnd;
+	}
+
+	public static LenskitConfiguration getCompletelyRandom() {
+		LenskitConfiguration rnd = new LenskitConfiguration();
+		rnd.bind(ItemScorer.class).to(CompletelyRandomItemScorer.class);
 		return rnd;
 	}
 
@@ -145,6 +156,42 @@ public class AlgorithmUtil {
 		return svd;
 	}
 
+	public static LenskitConfiguration getSVDManyFeatures() {
+		LenskitConfiguration svd = new LenskitConfiguration();
+		svd.bind(ItemScorer.class).to(SVDItemScorer.class);
+		svd.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		svd.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		svd.set(FeatureCount.class).to(200);
+		svd.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		svd.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		svd.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return svd;
+	}
+
+	public static LenskitConfiguration getSVDManyIterations() {
+		LenskitConfiguration svd = new LenskitConfiguration();
+		svd.bind(ItemScorer.class).to(SVDItemScorer.class);
+		svd.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		svd.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		svd.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		svd.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		svd.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		svd.set(IterationCount.class).to(2000);
+		return svd;
+	}
+
+	public static LenskitConfiguration getSVDLearningRate() {
+		LenskitConfiguration svd = new LenskitConfiguration();
+		svd.bind(ItemScorer.class).to(SVDItemScorer.class);
+		svd.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		svd.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		svd.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		svd.set(LearningRate.class).to(0.0001);
+		svd.set(RegularizationTerm.class).to(0.001);
+		svd.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return svd;
+	}
+
 	private static LenskitConfiguration getLuSVD() {
 		LenskitConfiguration luSVD = new LenskitConfiguration();
 		luSVD.bind(ItemScorer.class).to(LuSVDItemScorer.class);
@@ -221,7 +268,7 @@ public class AlgorithmUtil {
 		LenskitConfiguration funkSVD = new LenskitConfiguration();
 		funkSVD.bind(ItemScorer.class).to(FunkSVDItemScorer.class);
 		funkSVD.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
-		funkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		//funkSVD.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
 		funkSVD.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		funkSVD.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		funkSVD.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
@@ -304,27 +351,24 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
-	public static LenskitConfiguration getInvestigation() {
+	public static LenskitConfiguration getNonPersInvestigation() {
 		LenskitConfiguration alg = new LenskitConfiguration();
 		alg.bind(ItemScorer.class).to(NonPersInvestigationItemScorer.class);
 		return alg;
 	}
 
-	public static LenskitConfiguration getInvestigationPerUser() {
+	public static LenskitConfiguration getPersInvestigation() {
 		LenskitConfiguration alg = new LenskitConfiguration();
-		alg.bind(ItemScorer.class).to(InvestigationPerUserItemScorer.class);
-		alg.set(R_Threshold.class).to(Settings.R_THRESHOLD);
-		alg.set(D_Threshold.class).to(Settings.D_THRESHOLD);
-		alg.set(U_Threshold.class).to(Settings.U_THRESHOLD);
+		alg.bind(ItemScorer.class).to(PersInvestigationItemScorer.class);
 		return alg;
 	}
 
 	public static LenskitConfiguration getLCSVD() {
 		LenskitConfiguration alg = new LenskitConfiguration();
 		alg.bind(ItemScorer.class).to(LCAdvancedItemScorer.class);
-		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
 		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
 		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
 		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
 		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
 		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
@@ -363,6 +407,66 @@ public class AlgorithmUtil {
 		return pureSVD;
 	}
 
+	private static LenskitConfiguration getLCTest() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(LCITest.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getContent() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(ContentItemScorer.class);
+		alg.set(TFIDF.class).to(false);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTFIDF() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(ContentItemScorer.class);
+		alg.set(TFIDF.class).to(true);
+		return alg;
+	}
+
+	public static LenskitConfiguration getSerContent() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(SerContentItemScorer.class);
+		alg.set(TFIDF.class).to(false);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getSerTFIDF() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(SerContentItemScorer.class);
+		alg.set(TFIDF.class).to(true);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getSerUB() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(SerContentItemScorer.class);
+		alg.set(TFIDF.class).to(false);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(UserUserItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getSerPop() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(PopItemScorer.class);
+		alg.set(TFIDF.class).to(false);
+		return alg;
+	}
+
 	public static Map<String, LenskitConfiguration> getMap() {
 		Map<String, LenskitConfiguration> configurationMap = new HashMap<String, LenskitConfiguration>();
 		//Funk
@@ -382,12 +486,19 @@ public class AlgorithmUtil {
 		configurationMap.put("LuSVDBaysian", AlgorithmUtil.getLuSVDBaysian());
 
 		configurationMap.put("SVD", AlgorithmUtil.getSVD());
+		configurationMap.put("getSVDLearningRate", AlgorithmUtil.getSVDLearningRate());
+		configurationMap.put("getSVDManyFeatures", AlgorithmUtil.getSVDManyFeatures());
+		configurationMap.put("getSVDManyIterations", AlgorithmUtil.getSVDManyIterations());
 
 		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVDContent());
 		configurationMap.put("AdaSVD", AlgorithmUtil.getAdaSVD());
 		configurationMap.put("AdaPureSVD", AlgorithmUtil.getAdaPureSVD());
 		configurationMap.put("ItemItem", AlgorithmUtil.getItemItem());
 		configurationMap.put("Random", AlgorithmUtil.getRandom());
+		configurationMap.put("CRandom", AlgorithmUtil.getCompletelyRandom());
+		configurationMap.put("Content", AlgorithmUtil.getContent());
+		configurationMap.put("tfidf", AlgorithmUtil.getTFIDF());
+		configurationMap.put("SerContent", AlgorithmUtil.getSerContent());
 
 		configurationMap.put("LCRDU", AlgorithmUtil.getLCRDU());
 		configurationMap.put("LCDU", AlgorithmUtil.getLCDU());
@@ -396,10 +507,12 @@ public class AlgorithmUtil {
 		configurationMap.put("LCU", AlgorithmUtil.getLCU());
 		configurationMap.put("LCD", AlgorithmUtil.getLCD());
 		configurationMap.put("LCSVD", AlgorithmUtil.getLCSVD());
+		configurationMap.put("LCTest", AlgorithmUtil.getLCTest());
+
 		configurationMap.put("LCPureSVD", AlgorithmUtil.getLCPureSVD());
 		configurationMap.put("PureSVD", AlgorithmUtil.getPureSVD());
-		configurationMap.put("Investigation", AlgorithmUtil.getInvestigation());
-		configurationMap.put("Investigation_per_user", AlgorithmUtil.getInvestigationPerUser());
+		configurationMap.put("Investigation", AlgorithmUtil.getNonPersInvestigation());
+		configurationMap.put("Investigation_per_user", AlgorithmUtil.getPersInvestigation());
 		return configurationMap;
 	}
 }
