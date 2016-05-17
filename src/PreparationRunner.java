@@ -18,11 +18,15 @@ public class PreparationRunner {
 		//PrepareUtil.printUserItemRatingNumber("dataset/ml/small/ratings_unpop.dat");
 		//PrepareUtil.printDissimilarityRating("dataset/ml/small/ratings.dat", "dataset/ml/small/content.dat");
 		//PrepareUtil.printUnpopularityRating("dataset/ml/big/ratings.dat");
-		//PrepareUtil.printItemPopularity("dataset/ml/10m/ratings.dat");//"dataset/ml/big/ratings_unpop.dat");
+		//PrepareUtil.printItemPopularity("dataset/ml/big/ratings.dat");//"dataset/ml/big/ratings_unpop.dat");
 		//PrepareUtil.generateUnpopDataset("dataset/ml/big/ratings.dat", 344);
 		//printMovies();
 		//printMetrics();
-		process();
+		//PrepareUtil.printGenresNumber("dataset/yahoo/ratings.dat", "dataset/yahoo/content.dat");
+		//PrepareUtil.ratingsToGenres("dataset/ml/small/ratings.dat", "dataset/ml/small/content.dat");
+		PrepareUtil.ratingNumber("dataset/ml/big/ratings.dat");
+		//process();
+		//PrepareUtil.getPopMap("dataset/ml/big/ratings.dat");
 	}
 
 	private static void process() {
@@ -182,7 +186,7 @@ public class PreparationRunner {
 		for (String ratedItem : profile) {
 			Long ratedId = Long.valueOf(ratedItem);
 			SparseVector ratedVec = map.get(ratedId);
-			dissim += 1 - ContentUtil.getSim(ratedVec, vec);
+			dissim += 1 - ContentUtil.getJaccard(ratedVec, vec);
 		}
 		return dissim / profile.length;
 	}

@@ -133,7 +133,7 @@ public class LCITest extends AbstractItemScorer {
 		double dissim = 0.0;
 		for (IndexedPreference p : prefs) {
 			SparseVector ratedItemVec = itemContentMap.get(p.getItemId());
-			dissim += 1.0 - ContentUtil.getSim(ratedItemVec, itemVec);
+			dissim += 1.0 - ContentUtil.getJaccard(ratedItemVec, itemVec);
 		}
 		return dissim / prefs.size();
 	}

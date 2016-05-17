@@ -60,9 +60,16 @@ public class PureSVDModelBuilder implements Provider<PureSVDModel> {
 		Vector uvec = Vector.createLength(userCount);
 		Vector ivec = Vector.createLength(itemCount);
 
+		Random random = new Random();
+		random.setSeed(123);
+
 		for (int f = 0; f < featureCount; f++) {
-			uvec.fill(initialValue);
-			ivec.fill(initialValue);
+			for (int i = 0; i < userCount; i++) {
+				uvec.set(i, random.nextDouble());
+			}
+			for (int i = 0; i < itemCount; i++) {
+				ivec.set(i, random.nextDouble());
+			}
 
 			userFeatures.setColumn(f, uvec);
 			itemFeatures.setColumn(f, ivec);

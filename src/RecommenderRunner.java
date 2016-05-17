@@ -21,9 +21,12 @@ public class RecommenderRunner {
 		PrintWriter writer = new PrintWriter(new File("res.txt"));
 
 		List<Long> userList = new ArrayList<Long>();
-		userList.add(75l);
+		/*userList.add(75l);
 		userList.add(78l);
-		userList.add(170l);
+		userList.add(170l);*/
+		userList.add(1l);
+		userList.add(2l);
+		userList.add(3l);
 		/*for (long i = 100029l; i < 100033l; i++) {
 			userList.add(i);
 		}
@@ -34,8 +37,11 @@ public class RecommenderRunner {
 	}
 
 	private static void getRecommendations(List<Long> userList, PrintWriter writer) throws Exception {
-		//printRecs(AlgorithmUtil.getFunkSVD(), userList, writer, "FunkSVD");
+		printRecs(AlgorithmUtil.getTDASVD(0.9), userList, writer, "TDASVD");
 		printRecs(AlgorithmUtil.getSVD(), userList, writer, "SVD");
+		//printRecs(AlgorithmUtil.getFilterSerSVD(), userList, writer, "FilterSerSVD");
+		//printRecs(AlgorithmUtil.getFilterSVD(), userList, writer, "FilterSVD");
+		//printRecs(AlgorithmUtil.getFunkSVD(), userList, writer, "FunkSVD");
 		//printRecs(AlgorithmUtil.getSerPop(), userList, writer, "SerPop");
 		//printRecs(AlgorithmUtil.getSerUB(), userList, writer, "SerUB");
 		//printRecs(AlgorithmUtil.getSerTFIDF(), userList, writer, "SerTFIDF");
@@ -48,7 +54,7 @@ public class RecommenderRunner {
 		//printRecs(AlgorithmUtil.getLCRD(), userList, writer, "LCRD");
 		//printRecs(AlgorithmUtil.getLCRU(), userList, writer, "LCRU");
 		//printRecs(AlgorithmUtil.getLuSVDHinge10000(), userList, writer, "SPR");
-		//printRecs(AlgorithmUtil.getZhengSVDContent(), userList, writer, "Zheng");
+		//printRecs(AlgorithmUtil.getZhengSVD(), userList, writer, "Zheng");
 
 		/*System.out.println("PureSVD");
 		writer.println("PureSVD");

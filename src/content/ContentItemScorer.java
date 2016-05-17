@@ -36,7 +36,7 @@ public class ContentItemScorer extends AbstractItemScorer {
 		MutableSparseVector vector = dissimilarity.getEmptyVector();
 		for (IndexedPreference pref : preferences) {
 			SparseVector itemVector = map.get(pref.getItemId());
-			if(tfidf){
+			if (tfidf) {
 				itemVector = dissimilarity.toTFIDF(itemVector);
 			}
 			vector.add(itemVector);
@@ -51,10 +51,13 @@ public class ContentItemScorer extends AbstractItemScorer {
 		List<ContentContainer> list = new ArrayList<ContentContainer>();
 		for (long id : itemIds) {
 			SparseVector itemVector = map.get(id);
-			if(tfidf){
+			double score;
+			if (tfidf) {
 				itemVector = dissimilarity.toTFIDF(itemVector);
+				score = ContentUtil.getCos(userVector, itemVector);
+			} else {
+				score = ContentUtil.getJaccard(userVector, itemVector);
 			}
-			double score = ContentUtil.getCos(userVector, itemVector);
 			double pop = popModel.getPop(id);
 			list.add(new ContentContainer(id, score, pop));
 		}

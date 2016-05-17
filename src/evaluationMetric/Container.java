@@ -30,4 +30,10 @@ public class Container<T extends Comparable<T>> implements Comparable<Container>
 		Container<T> obj = (Container<T>) o;
 		return value.compareTo(obj.getValue());
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		Container container = (Container) obj;
+		return id.equals(container.getId());
+	}
 }

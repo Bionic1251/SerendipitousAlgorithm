@@ -76,7 +76,7 @@ public class OnlineParser {
 		for (String ratedItem : profile) {
 			Long ratedId = Long.valueOf(ratedItem);
 			SparseVector ratedVec = map.get(ratedId);
-			dissim += 1 - ContentUtil.getSim(ratedVec, vec);
+			dissim += 1 - ContentUtil.getJaccard(ratedVec, vec);
 		}
 		return dissim / profile.size();
 	}
@@ -90,7 +90,7 @@ public class OnlineParser {
 		for (String ratedItem : profile) {
 			Long ratedId = Long.valueOf(ratedItem);
 			SparseVector ratedVec = map.get(ratedId);
-			dissim += 1 - ContentUtil.getSim(ratedVec, vec);
+			dissim += 1 - ContentUtil.getJaccard(ratedVec, vec);
 		}
 		return dissim / profile.size();
 	}

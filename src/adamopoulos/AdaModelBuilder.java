@@ -206,7 +206,7 @@ public class AdaModelBuilder implements Provider<AdaModel> {
 		}
 		SparseVector vec1 = itemMap.get(itemId1);
 		SparseVector vec2 = itemMap.get(itemId2);
-		double sim = ContentUtil.getSim(vec1, vec2);
+		double sim = ContentUtil.getJaccard(vec1, vec2);
 		return 1 - sim;
 	}
 }

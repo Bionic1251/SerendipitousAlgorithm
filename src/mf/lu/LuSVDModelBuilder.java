@@ -82,9 +82,16 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		Vector uvec = Vector.createLength(userCount);
 		Vector ivec = Vector.createLength(itemCount);
 
+		Random random = new Random();
+		random.setSeed(123);
+
 		for (int f = 0; f < featureCount; f++) {
-			uvec.fill(initialValue);
-			ivec.fill(initialValue);
+			for (int i = 0; i < userCount; i++) {
+				uvec.set(i, random.nextDouble());
+			}
+			for (int i = 0; i < itemCount; i++) {
+				ivec.set(i, random.nextDouble());
+			}
 
 			userFeatures.setColumn(f, uvec);
 			itemFeatures.setColumn(f, ivec);
@@ -94,6 +101,7 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		}
 
 		TrainingLoopController controller = stoppingCondition.newLoop();
+		calculateStatistics(userFeatures, itemFeatures);
 		while (controller.keepTraining(0.0)) {
 			train(userFeatures, itemFeatures);
 			calculateStatistics(userFeatures, itemFeatures);
@@ -127,8 +135,8 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		double likedPred = likedVec.dotProduct(user);
 		double dislikedPred = dislikedVec.dotProduct(user);
 
-		likedPred = domain.clampValue(likedPred);
-		dislikedPred = domain.clampValue(dislikedPred);
+		/*likedPred = domain.clampValue(likedPred);
+		dislikedPred = domain.clampValue(dislikedPred);*/
 
 		double pop = Math.pow(popModel.getPop(disliked.getItemId()) / popModel.getMax(), alpha);
 		pop *= norm * mult;
@@ -168,8 +176,8 @@ public class LuSVDModelBuilder implements Provider<LuSVDModel> {
 		double likedPred = likedVec.dotProduct(user);
 		double dislikedPred = dislikedVec.dotProduct(user);
 
-		likedPred = domain.clampValue(likedPred);
-		dislikedPred = domain.clampValue(dislikedPred);
+		/*likedPred = domain.clampValue(likedPred);
+		dislikedPred = domain.clampValue(dislikedPred);*/
 
 		double pop = Math.pow(popModel.getPop(disliked.getItemId()) / popModel.getMax(), alpha);
 		pop *= norm * mult;

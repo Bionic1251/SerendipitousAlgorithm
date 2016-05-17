@@ -11,6 +11,7 @@ import org.grouplens.lenskit.data.text.DelimitedColumnEventFormat;
 import org.grouplens.lenskit.data.text.RatingEventType;
 import org.grouplens.lenskit.data.text.TextEventDAO;
 import org.grouplens.lenskit.eval.data.crossfold.CrossfoldTask;
+import org.grouplens.lenskit.eval.metrics.predict.RMSEPredictMetric;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelector;
 import org.grouplens.lenskit.eval.metrics.topn.ItemSelectors;
 import org.grouplens.lenskit.eval.traintest.SimpleEvaluator;
@@ -23,7 +24,6 @@ import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
-import java.util.Properties;
 
 public class ExperimentRunner {
 
@@ -52,6 +52,7 @@ public class ExperimentRunner {
 		setEvaluator(evaluator);
 
 		addAlgorithms(algs, evaluator);
+		//addDiversification(evaluator);
 
 		ContentAverageDissimilarity.create(Settings.DATASET_CONTENT);
 
@@ -84,26 +85,38 @@ public class ExperimentRunner {
 		}
 	}
 
+	private static void addDiversification(SimpleEvaluator evaluator) {
+		for (int factor = 0; factor < 11; factor += 1) {
+			evaluator.addAlgorithm("TDAAdvSVD" + factor, AlgorithmUtil.getTDAAdvancedSVD(Settings.DIVERSIFICATION_FACTOR, factor / 10.0));
+			evaluator.addAlgorithm("TDAGenreSVD" + factor, AlgorithmUtil.getTDAGenreSVD(Settings.DIVERSIFICATION_FACTOR, factor / 10.0));
+		}
+	}
+
 	private static void addEvaluationMetrics(SimpleEvaluator evaluator) {
-		//addOnePlusRandomMetric(evaluator);
+		//evaluator.addMetric(new RMSEPredictMetric());
+		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
 
 		addMetricsWithParameters(evaluator, ItemSelectors.testItems(), "test");
 
-		addMetricsWithParameters(evaluator, ItemSelectors.allItems(), "all");
-
+		//addOnePlusRandomMetric(evaluator);
 		//ItemSelector popCandidates = ItemSelectors.union(new MyPopularItemSelector(getPopItems(Settings.POPULAR_ITEMS_FOR_CANDIDATES)), ItemSelectors.testItems());
 		//addMetricsWithParameters(evaluator, popCandidates, POPULAR_ITEMS_FOR_CANDIDATES + "pop");
-
 		//addMetricsWithParameters(evaluator, ItemSelectors.union(ItemSelectors.testItems(), ItemSelectors.nRandom(RANDOM_ITEMS_FOR_CANDIDATES)), RANDOM_ITEMS_FOR_CANDIDATES + "rand");
 	}
 
 	private static void addMetricsWithParameters(SimpleEvaluator evaluator, ItemSelector candidates, String prefix) {
 		ItemSelector threshold = ItemSelectors.testRatingMatches(Matchers.greaterThan(Settings.R_THRESHOLD));
 		ItemSelector exclude = ItemSelectors.trainingItems();
-		//evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
+		evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		evaluator.addMetric(new AggregateNDCGTopNMetric(prefix, "", candidates, exclude));
-		/*evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
-		evaluator.addMetric(new AggregateGenresSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));*/
+		evaluator.addMetric(new AggregateNewNRDUMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
+				Settings.U_THRESHOLD, Settings.D_THRESHOLD));
+		evaluator.addMetric(new AggregatePopSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
+		evaluator.addMetric(new AggregateGenresSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude));
+		evaluator.addMetric(new AggregateDiversityMetric(prefix, candidates, exclude));
+		//evaluator.addMetric(new AggregateCustomSerendipityTopNMetric(prefix, Settings.POPULAR_ITEMS_SERENDIPITY_NUMBER, candidates, exclude, threshold));
+		//evaluator.addMetric(new WriterMetric());
+		//evaluator.addMetric(new AggregatePrecisionRecallTopNMetric(prefix, "", candidates, exclude, threshold));
 		/*evaluator.addMetric(new AggregateNRDUMetric("RANK22" + prefix, "", candidates, exclude, Settings.R_THRESHOLD,
 				Settings.U_THRESHOLD, Settings.D_THRESHOLD));*/
 		//evaluator.addMetric(new AggreagateComponentMetric(prefix, candidates, exclude));

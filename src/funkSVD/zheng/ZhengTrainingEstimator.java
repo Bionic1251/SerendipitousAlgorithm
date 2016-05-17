@@ -50,7 +50,7 @@ public final class ZhengTrainingEstimator {
 	 * Initialize the training estimator.
 	 *
 	 * @param snap     The preference snapshot.
-	 * @param baseline The baseline predictor.
+	 * @param baseline The genrePredictor predictor.
 	 * @param dom      The preference domain (for clamping).
 	 */
 	ZhengTrainingEstimator(PreferenceSnapshot snap, ItemScorer baseline, PreferenceDomain dom) {

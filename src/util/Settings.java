@@ -33,6 +33,10 @@ public class Settings {
 	public static double LU_LEARNING_RATE;
 	public static double LU_REGULARIZATION_TERM;
 
-	public static double FRACTION;
-	public static double GENRES_NUMBER;
+	public static double FRACTION = 0.15;
+	public static double GENRES_NUMBER = 5;
+	public static double DIVERSIFICATION_FACTOR = 0.9;
+	public static double SERENDIPITY_WEIGHT = 0.6;
+
+	public static int ADDITIONAL_OBVIOUS;
 }

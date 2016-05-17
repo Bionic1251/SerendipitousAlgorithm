@@ -4,6 +4,7 @@ import adamopoulos.AdaItemScorer;
 import annotation.*;
 import content.ContentItemScorer;
 import content.SerContentItemScorer;
+import diversity.*;
 import funkSVD.lu.LuFunkSVDItemScorer;
 import funkSVD.lu.LuUpdateRule;
 import funkSVD.lu.LuUpdateRuleBaysian;
@@ -32,11 +33,17 @@ import org.grouplens.lenskit.knn.item.ItemItemScorer;
 import org.grouplens.lenskit.knn.user.UserUserItemScorer;
 import org.grouplens.lenskit.mf.funksvd.FeatureCount;
 import org.grouplens.lenskit.mf.funksvd.FunkSVDItemScorer;
+import org.grouplens.lenskit.transform.normalize.MeanCenteringVectorNormalizer;
+import org.grouplens.lenskit.transform.normalize.UserVectorNormalizer;
+import org.grouplens.lenskit.transform.normalize.VectorNormalizer;
 import org.grouplens.lenskit.vectors.similarity.PearsonCorrelation;
 import org.grouplens.lenskit.vectors.similarity.VectorSimilarity;
 import pop.PopItemScorer;
 import random.CompletelyRandomItemScorer;
 import random.RandomItemScorer;
+import ser.FilterItemScorer;
+import ser.funkSer.SerFunkSVDItemScorer;
+import ser.serSVD.SerSVDItemScorer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -139,7 +146,7 @@ public class AlgorithmUtil {
 		return zhengSVD;
 	}
 
-	public static LenskitConfiguration getZhengSVDContent() {
+	public static LenskitConfiguration getZhengSVD() {
 		LenskitConfiguration zhengSVD = getZhengSVDTemplate();
 		return zhengSVD;
 	}
@@ -467,6 +474,164 @@ public class AlgorithmUtil {
 		return alg;
 	}
 
+	public static LenskitConfiguration getFilterSVD() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getFilterFunkSVD() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(FunkSVDItemScorer.class);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(FunkSVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getFilterSerSVD() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SerSVDItemScorer.class);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		return alg;
+	}
+
+	public static LenskitConfiguration getFilterSerFunkSVD() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SerFunkSVDItemScorer.class);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(FunkSVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.bind(BaselineScorer.class, ItemScorer.class).to(UserMeanItemScorer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getUserUser() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(UserUserItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.within(UserVectorNormalizer.class).bind(VectorNormalizer.class).to(MeanCenteringVectorNormalizer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getFilterUserUser() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(UserUserItemScorer.class);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.bind(UserMeanBaseline.class, ItemScorer.class).to(ItemMeanRatingItemScorer.class);
+		alg.within(UserVectorNormalizer.class).bind(VectorNormalizer.class).to(MeanCenteringVectorNormalizer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getFilterTFIDF() {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(FilterItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(ContentItemScorer.class);
+		alg.set(TFIDF.class).to(true);
+		alg.bind(RatingPredictor2.class, ItemScorer.class).to(SVDItemScorer.class);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAPop(double factor) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(PopItemScorer.class);
+		alg.set(Alpha.class).to(factor);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDASVD(double factor) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.set(Alpha.class).to(factor);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAPureSVD(double factor) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(PureSVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
+		alg.set(Alpha.class).to(factor);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAAdvancedPop(double factor, double serWeight) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAAdvancedItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(PopItemScorer.class);
+		alg.set(Alpha.class).to(factor);
+		alg.set(DissimilarityWeight.class).to(serWeight);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAAdvancedSVD(double factor, double serWeight) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAAdvancedItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.set(Alpha.class).to(factor);
+		alg.set(DissimilarityWeight.class).to(serWeight);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAAdvancedPureSVD(double factor, double serWeight) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAAdvancedItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(PureSVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.ZHENG_LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.ZHENG_REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_PURE_SVD);
+		alg.set(Alpha.class).to(factor);
+		alg.set(DissimilarityWeight.class).to(serWeight);
+		return alg;
+	}
+
+	public static LenskitConfiguration getTDAGenreSVD(double factor, double serWeight) {
+		LenskitConfiguration alg = new LenskitConfiguration();
+		alg.bind(ItemScorer.class).to(TDAPredictionItemScorer.class);
+		alg.bind(RatingPredictor.class, ItemScorer.class).to(SVDItemScorer.class);
+		alg.set(FeatureCount.class).to(Settings.FEATURE_COUNT);
+		alg.set(LearningRate.class).to(Settings.LEARNING_RATE);
+		alg.set(RegularizationTerm.class).to(Settings.REGULARIZATION_TERM);
+		alg.set(IterationCount.class).to(Settings.ITERATION_COUNT_SVD);
+		alg.set(Alpha.class).to(factor);
+		alg.set(DissimilarityWeight.class).to(serWeight);
+		return alg;
+	}
+
+
 	public static Map<String, LenskitConfiguration> getMap() {
 		Map<String, LenskitConfiguration> configurationMap = new HashMap<String, LenskitConfiguration>();
 		//Funk
@@ -475,9 +640,16 @@ public class AlgorithmUtil {
 		configurationMap.put("FunkSVD", AlgorithmUtil.getFunkSVD());
 		configurationMap.put("ZhengFunkSVD", AlgorithmUtil.getZhengFunkSVD());
 		configurationMap.put("AdaFunkSVD", AlgorithmUtil.getAdaFunkSVD());
+		configurationMap.put("UserUser", AlgorithmUtil.getUserUser());
 
 		configurationMap.put("POP", AlgorithmUtil.getPop());
 		configurationMap.put("POPReverse", AlgorithmUtil.getReversePop());
+		configurationMap.put("FilterSVD", AlgorithmUtil.getFilterSVD());
+		configurationMap.put("FilterSerSVD", AlgorithmUtil.getFilterSerSVD());
+		configurationMap.put("FilterFunk", AlgorithmUtil.getFilterFunkSVD());
+		configurationMap.put("FilterSerFunk", AlgorithmUtil.getFilterSerFunkSVD());
+		configurationMap.put("FilterUserUser", AlgorithmUtil.getFilterUserUser());
+		configurationMap.put("FilterTFIDF", AlgorithmUtil.getFilterTFIDF());
 
 		//Lu
 		configurationMap.put("LuSVDHinge", AlgorithmUtil.getLuSVDHinge());
@@ -490,15 +662,24 @@ public class AlgorithmUtil {
 		configurationMap.put("getSVDManyFeatures", AlgorithmUtil.getSVDManyFeatures());
 		configurationMap.put("getSVDManyIterations", AlgorithmUtil.getSVDManyIterations());
 
-		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVDContent());
+		configurationMap.put("ZhengSVD", AlgorithmUtil.getZhengSVD());
 		configurationMap.put("AdaSVD", AlgorithmUtil.getAdaSVD());
 		configurationMap.put("AdaPureSVD", AlgorithmUtil.getAdaPureSVD());
 		configurationMap.put("ItemItem", AlgorithmUtil.getItemItem());
+		configurationMap.put("UserUser", AlgorithmUtil.getUserUser());
 		configurationMap.put("Random", AlgorithmUtil.getRandom());
 		configurationMap.put("CRandom", AlgorithmUtil.getCompletelyRandom());
 		configurationMap.put("Content", AlgorithmUtil.getContent());
 		configurationMap.put("tfidf", AlgorithmUtil.getTFIDF());
 		configurationMap.put("SerContent", AlgorithmUtil.getSerContent());
+
+		configurationMap.put("TDAPop", AlgorithmUtil.getTDAPop(Settings.DIVERSIFICATION_FACTOR));
+		configurationMap.put("TDASVD", AlgorithmUtil.getTDASVD(Settings.DIVERSIFICATION_FACTOR));
+		configurationMap.put("TDAPureSVD", AlgorithmUtil.getTDAPureSVD(Settings.DIVERSIFICATION_FACTOR));
+		configurationMap.put("TDAAdvPop", AlgorithmUtil.getTDAAdvancedPop(Settings.DIVERSIFICATION_FACTOR, Settings.SERENDIPITY_WEIGHT));
+		configurationMap.put("TDAAdvSVD", AlgorithmUtil.getTDAAdvancedSVD(Settings.DIVERSIFICATION_FACTOR, Settings.SERENDIPITY_WEIGHT));
+		configurationMap.put("TDAGenreSVD", AlgorithmUtil.getTDAGenreSVD(Settings.DIVERSIFICATION_FACTOR, Settings.SERENDIPITY_WEIGHT));
+		configurationMap.put("TDAAdvPureSVD", AlgorithmUtil.getTDAAdvancedPureSVD(Settings.DIVERSIFICATION_FACTOR, Settings.SERENDIPITY_WEIGHT));
 
 		configurationMap.put("LCRDU", AlgorithmUtil.getLCRDU());
 		configurationMap.put("LCDU", AlgorithmUtil.getLCDU());

@@ -111,13 +111,13 @@ public class AggregatePrecisionRecallTopNMetric extends AbstractMetric<Aggregate
 	public AggregateResult doMeasureUser(TestUser user, Context context) {
 		List<ScoredId> recs = user.getRecommendations(30, candidates, exclude);
 		if (recs == null || recs.isEmpty()) {
-			context1.addUser(0,0);
-			context5.addUser(0,0);
-			context10.addUser(0,0);
-			context15.addUser(0,0);
-			context20.addUser(0,0);
-			context25.addUser(0,0);
-			context30.addUser(0,0);
+			context1.addUser(0, 0);
+			context5.addUser(0, 0);
+			context10.addUser(0, 0);
+			context15.addUser(0, 0);
+			context20.addUser(0, 0);
+			context25.addUser(0, 0);
+			context30.addUser(0, 0);
 			logger.warn("no recommendations for user {}", user.getUserId());
 			return new AggregateResult(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 		}
@@ -176,36 +176,43 @@ public class AggregatePrecisionRecallTopNMetric extends AbstractMetric<Aggregate
 	public static class AggregateResult {
 		@ResultColumn("Precision1")
 		public final double precision1;
+		@ResultColumn("Precision5")
+		public final double precision5;
+		@ResultColumn("Precision10")
+		public final double precision10;
+		@ResultColumn("Precision15")
+		public final double precision15;
+		@ResultColumn("Precision20")
+		public final double precision20;
+		@ResultColumn("Precision25")
+		public final double precision25;
+		@ResultColumn("Precision30")
+		public final double precision30;
+
 		@ResultColumn("Recall1")
 		public final double recall1;
 
-		@ResultColumn("Precision5")
-		public final double precision5;
+
 		@ResultColumn("Recall5")
 		public final double recall5;
 
-		@ResultColumn("Precision10")
-		public final double precision10;
+
 		@ResultColumn("Recall10")
 		public final double recall10;
 
-		@ResultColumn("Precision15")
-		public final double precision15;
+
 		@ResultColumn("Recall15")
 		public final double recall15;
 
-		@ResultColumn("Precision20")
-		public final double precision20;
+
 		@ResultColumn("Recall20")
 		public final double recall20;
 
-		@ResultColumn("Precision25")
-		public final double precision25;
+
 		@ResultColumn("Recall25")
 		public final double recall25;
 
-		@ResultColumn("Precision30")
-		public final double precision30;
+
 		@ResultColumn("Recall30")
 		public final double recall30;
 

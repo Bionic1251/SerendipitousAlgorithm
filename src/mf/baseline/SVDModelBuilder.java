@@ -16,6 +16,7 @@ import org.grouplens.lenskit.mf.funksvd.FeatureInfo;
 import org.grouplens.lenskit.mf.funksvd.InitialFeatureValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pop.PopModel;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,15 +32,17 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 	protected final double regularization;
 	private final StoppingCondition stoppingCondition;
 	protected final PreferenceSnapshot snapshot;
+	private final PopModel popModel;
 	protected final double initialValue;
 
 	@Inject
 	public SVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 						   @FeatureCount int featureCount,
 						   @InitialFeatureValue double initVal, @LearningRate double lrate,
-						   @RegularizationTerm double reg, StoppingCondition stop) {
+						   @RegularizationTerm double reg, StoppingCondition stop, PopModel popModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
+		this.popModel = popModel;
 		this.snapshot = snapshot;
 		learningRate = lrate;
 		regularization = reg;
@@ -56,7 +59,7 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 		int itemCount = snapshot.getItemIds().size();
 		Matrix itemFeatures = Matrix.create(itemCount, featureCount);
 
-		logger.info("Building baseline with {} features for {} ratings",
+		logger.info("Building genrePredictor with {} features for {} ratings",
 				featureCount, snapshot.getRatings().size());
 
 		List<FeatureInfo> featureInfo = new ArrayList<FeatureInfo>(featureCount);
@@ -64,9 +67,19 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 		Vector uvec = Vector.createLength(userCount);
 		Vector ivec = Vector.createLength(itemCount);
 
+		Random random = new Random();
+		random.setSeed(123);
+
 		for (int f = 0; f < featureCount; f++) {
-			uvec.fill(initialValue);
-			ivec.fill(initialValue);
+			for(int i = 0; i < userCount; i++){
+				uvec.set(i, random.nextDouble());
+			}
+			for(int i = 0; i < itemCount; i++){
+				long id = snapshot.itemIndex().getId(i);
+				ivec.set(i, (double) popModel.getPop(id) / popModel.getMax());
+			}
+			/*uvec.fill(initialValue);
+			ivec.fill(initialValue);*/
 
 			userFeatures.setColumn(f, uvec);
 			itemFeatures.setColumn(f, ivec);

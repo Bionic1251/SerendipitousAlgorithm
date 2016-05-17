@@ -1,8 +1,10 @@
 package util;
 
+import evaluationMetric.Container;
 import lc.Normalizer;
 import org.grouplens.lenskit.data.pref.IndexedPreference;
 import org.grouplens.lenskit.data.snapshot.PreferenceSnapshot;
+import org.grouplens.lenskit.eval.traintest.TestUser;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.VectorEntry;
@@ -10,12 +12,56 @@ import org.grouplens.lenskit.vectors.VectorEntry;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class Util {
+	public static Set<Long> getGenresByTestUser(TestUser user) {
+		SparseVector userVector = getUserVector(user);
+		return getGenresByUserVector(userVector);
+	}
+
+	private static SparseVector getUserVector(TestUser user) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		Map<Long, SparseVector> map = dissimilarity.getItemContentMap();
+		MutableSparseVector vector = dissimilarity.getEmptyVector();
+		for (long item : user.getTrainHistory().itemSet()) {
+			if (!map.containsKey(item)) {
+				continue;
+			}
+			SparseVector itemVector = map.get(item);
+			itemVector = dissimilarity.toTFIDF(itemVector);
+			vector.add(itemVector);
+		}
+		return vector;
+	}
+
+	public static Set<Long> getGenresByUserVector(SparseVector userVector) {
+		Set<Long> newFeatures = new HashSet<Long>();
+		List<Container<Double>> list = new ArrayList<Container<Double>>();
+		for (long key : userVector.keySet()) {
+			list.add(new Container<Double>(key, userVector.get(key)));
+		}
+		Collections.sort(list);
+		for (int i = 0; i < list.size(); i++) {
+			if (i < Settings.GENRES_NUMBER || list.get(i).getValue() == 0.0) {
+				newFeatures.add(list.get(i).getId());
+			}
+		}
+		return newFeatures;
+	}
+
+	public static double getUnexpectedness(Set<Long> genres, Long itemId) {
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		SparseVector itemVector = dissimilarity.getItemContentMap().get(itemId);
+		double newGenres = 0;
+		for (Long key : itemVector.keySet()) {
+			if (genres.contains(key)) {
+				newGenres += 1.0;
+			}
+		}
+		return newGenres / genres.size();
+	}
+
 	public static Normalizer getVectorNormalizer(SparseVector ratings) {
 		double min = Double.MAX_VALUE;
 		double max = Double.MIN_VALUE;
@@ -125,10 +171,10 @@ public class Util {
 			Settings.LU_REGULARIZATION_TERM = Double.valueOf((String) prop.get("lu_regularization_term"));
 			System.out.println("lu_regularization_term " + Settings.LU_REGULARIZATION_TERM);
 
-			Settings.FRACTION = Double.valueOf((String) prop.get("fraction"));
-			System.out.println("fraction " + Settings.FRACTION);
+			Settings.ADDITIONAL_OBVIOUS = Integer.valueOf((String) prop.get("obvious_items_number"));
+			System.out.println("obvious_items_number " + Settings.ADDITIONAL_OBVIOUS);
 
-			Settings.GENRES_NUMBER = Double.valueOf((String) prop.get("genres"));
+			Settings.GENRES_NUMBER = Integer.valueOf((String) prop.get("genres"));
 			System.out.println("genres " + Settings.GENRES_NUMBER);
 
 		} catch (IOException io) {
@@ -143,5 +189,29 @@ public class Util {
 			}
 
 		}
+	}
+
+	public static Set<Long> getExpectedSet(long user, MutableSparseVector scores, PreferenceSnapshot snapshot) {
+		List<Container<Double>> list = new ArrayList<Container<Double>>();
+		Set<Long> expectedSet = new HashSet<Long>();
+		for (Long key : scores.keySet()) {
+			list.add(new Container<Double>(key, scores.get(key)));
+		}
+		Collections.sort(list);
+		Collections.reverse(list);
+		Set<Long> trainingSet = new HashSet<Long>();
+		Collection<IndexedPreference> prefs = snapshot.getUserRatings(user);
+		for (IndexedPreference pref : prefs) {
+			trainingSet.add(pref.getItemId());
+		}
+		int i = 0;
+		while (expectedSet.size() < Settings.ADDITIONAL_OBVIOUS && i < list.size()) {
+			Long id = list.get(i).getId();
+			if (!trainingSet.contains(id)) {
+				expectedSet.add(id);
+			}
+			i++;
+		}
+		return expectedSet;
 	}
 }

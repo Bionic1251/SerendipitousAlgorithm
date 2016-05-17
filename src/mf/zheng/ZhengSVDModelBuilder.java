@@ -40,12 +40,14 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 	protected final double initialValue;
 	private PopModel popModel;
 	private Map<Long, SparseVector> userItemDissimilarityMap;
+	private final ItemItemModel itemItemModel;
 
 	@Inject
 	public ZhengSVDModelBuilder(@Transient @Nonnull PreferenceSnapshot snapshot,
 								@FeatureCount int featureCount,
 								@InitialFeatureValue double initVal, @LearningRate double lrate,
-								@RegularizationTerm double reg, StoppingCondition stop, PopModel popModel) {
+								@RegularizationTerm double reg, StoppingCondition stop, PopModel popModel,
+								ItemItemModel itemItemModel) {
 		this.featureCount = featureCount;
 		this.initialValue = initVal;
 		this.snapshot = snapshot;
@@ -53,13 +55,15 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		regularization = reg;
 		stoppingCondition = stop;
 		this.popModel = popModel;
+		this.itemItemModel = itemItemModel;
 	}
 
 	@Override
 	public ZhengSVDModel get() {
 		System.out.println(ZhengSVDModelBuilder.class);
-		ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
-		userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
+		//ContentAverageDissimilarity contentAverageDissimilarity = ContentAverageDissimilarity.getInstance();
+		//userItemDissimilarityMap = contentAverageDissimilarity.getUserItemAvgDistanceMap(snapshot);
+		userItemDissimilarityMap = CollaborativeUtil.getUserItemMap(snapshot, itemItemModel);
 
 		int userCount = snapshot.getUserIds().size();
 		Matrix userFeatures = Matrix.create(userCount, featureCount);
@@ -72,9 +76,16 @@ public class ZhengSVDModelBuilder implements Provider<ZhengSVDModel> {
 		Vector uvec = Vector.createLength(userCount);
 		Vector ivec = Vector.createLength(itemCount);
 
+		Random random = new Random();
+		random.setSeed(123);
+
 		for (int f = 0; f < featureCount; f++) {
-			uvec.fill(initialValue);
-			ivec.fill(initialValue);
+			for (int i = 0; i < userCount; i++) {
+				uvec.set(i, random.nextDouble());
+			}
+			for (int i = 0; i < itemCount; i++) {
+				ivec.set(i, random.nextDouble());
+			}
 
 			userFeatures.setColumn(f, uvec);
 			itemFeatures.setColumn(f, ivec);

@@ -33,6 +33,10 @@ public class ContentAverageDissimilarity {
 		return instance;
 	}
 
+	public int getGenreFreq(int idx){
+		return termDocFreq[idx];
+	}
+
 	public Map<Long, SparseVector> getItemContentMap() {
 		return itemContentMap;
 	}
@@ -135,9 +139,12 @@ public class ContentAverageDissimilarity {
 			for (long itemId : itemIds) {
 				double dissimilaritySum = 0;
 				int count = 0;
+				if (!itemContentMap.containsKey(itemId)) {
+					continue;
+				}
 				SparseVector itemVector = itemContentMap.get(itemId);
 				for (IndexedPreference rating : ratings) {
-					if (rating.getItemId() == itemId) {
+					if (rating.getItemId() == itemId || !itemContentMap.containsKey(itemId)) {
 						continue;
 					}
 					SparseVector ratedItemVector = itemContentMap.get(rating.getItemId());
@@ -163,7 +170,10 @@ public class ContentAverageDissimilarity {
 	}
 
 	private double getDissimilarity(SparseVector vec1, SparseVector vec2) {
-		return 1 - ContentUtil.getSim(vec1, vec2);
+		if (vec1 == null || vec2 == null) {
+			return 0.0;
+		}
+		return 1 - ContentUtil.getJaccard(vec1, vec2);
 	}
 
 	public double getAverageDissimilarity(Long userId, Long itemId, PreferenceSnapshot snapshot) {
@@ -172,8 +182,14 @@ public class ContentAverageDissimilarity {
 			return 1;
 		}
 		double dissimilaritySum = 0;
+		if (!itemContentMap.containsKey(itemId)) {
+			return 0.0;
+		}
 		SparseVector itemVector = itemContentMap.get(itemId);
 		for (IndexedPreference rating : ratings) {
+			if (!itemContentMap.containsKey(rating.getItemId())) {
+				continue;
+			}
 			SparseVector ratedItemVector = itemContentMap.get(rating.getItemId());
 			dissimilaritySum += getDissimilarity(ratedItemVector, itemVector);
 		}
@@ -193,8 +209,14 @@ public class ContentAverageDissimilarity {
 		}
 		for (Long itemId : itemIds) {
 			double dissimilaritySum = 0;
+			if (!itemContentMap.containsKey(itemId)) {
+				continue;
+			}
 			SparseVector itemVector = itemContentMap.get(itemId);
 			for (IndexedPreference rating : ratings) {
+				if (!itemContentMap.containsKey(rating.getItemId())) {
+					continue;
+				}
 				SparseVector ratedItemVector = itemContentMap.get(rating.getItemId());
 				dissimilaritySum += getDissimilarity(ratedItemVector, itemVector);
 			}

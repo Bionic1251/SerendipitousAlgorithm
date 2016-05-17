@@ -45,10 +45,6 @@ public class ContentUtil {
 		return dot / denom;
 	}
 
-	public static double getSim(SparseVector vector1, SparseVector vector2) {
-		return getJaccard(vector1, vector2);
-	}
-
 	public static SparseVector getUserSparseVector(UserHistory<Event> events, Map<Long, SparseVector> itemContentMap) {
 		LongSet set = events.itemSet();
 		return getUserSparseVector(set, itemContentMap);

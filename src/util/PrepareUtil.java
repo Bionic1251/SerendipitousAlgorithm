@@ -2,6 +2,7 @@ package util;
 
 import evaluationMetric.Container;
 import org.grouplens.lenskit.util.statistics.MeanAccumulator;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 
 import java.io.*;
@@ -111,59 +112,6 @@ public class PrepareUtil {
 			e.printStackTrace();
 		}
 		return popMap;
-	}
-
-	public static void printDissimilarityRating(String ratingPath, String contentPath) {
-		int count = 0;
-		ContentAverageDissimilarity.create(contentPath);
-		try {
-			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
-			PrintWriter writer = new PrintWriter(new File("dissim_rating.csv"));
-			try {
-				Map<Long, Double> itemRatingMap = new HashMap<Long, Double>();
-				String userId = "";
-				String line = reader.readLine();
-				while (line != null) {
-					count++;
-					if (count % 1000 == 0) {
-						System.out.println("Processed " + count);
-					}
-					String newUserId = getUserId(line);
-					if (!newUserId.equals(userId)) {
-						printValues(itemRatingMap, writer);
-						itemRatingMap = new HashMap<Long, Double>();
-						userId = newUserId;
-					}
-					addRating(line, itemRatingMap);
-					line = reader.readLine();
-				}
-			} finally {
-				reader.close();
-				writer.close();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private static void printValues(Map<Long, Double> itemRatingMap, PrintWriter writer) {
-		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
-		Map<Long, SparseVector> itemContentMap = dissimilarity.getItemContentMap();
-		for (Map.Entry<Long, Double> item : itemRatingMap.entrySet()) {
-			SparseVector contentItem = itemContentMap.get(item.getKey());
-			double sum = 0;
-			for (Map.Entry<Long, Double> tempItem : itemRatingMap.entrySet()) {
-				if (item.getKey().equals(tempItem.getKey())) {
-					continue;
-				}
-				SparseVector tempContentItem = itemContentMap.get(tempItem.getKey());
-				double sim = ContentUtil.getSim(tempContentItem, contentItem);
-				double dissim = 1 - sim;
-				sum += dissim;
-			}
-			double res = sum / (double) (itemRatingMap.size() - 1);
-			writer.println(res + "," + item.getValue());
-		}
 	}
 
 	private static String getRating(String line) {
@@ -608,5 +556,133 @@ public class PrepareUtil {
 			e.printStackTrace();
 		}
 		return popMap;
+	}
+
+	public static void printGenresNumber(String ratingPath, String contentPath) {
+		ContentAverageDissimilarity.create(contentPath);
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			try {
+				int count = 0, sum = 0;
+				int max = Integer.MIN_VALUE, min = Integer.MAX_VALUE;
+				String line = reader.readLine();
+				String[] split = line.split("	");
+				String userId = split[0];
+				Set<Long> profile = new HashSet<Long>();
+				while (line != null) {
+					split = line.split("	");
+					String newUserId = split[0];
+					if (!newUserId.equals(userId)) {
+						count++;
+						sum += profile.size();
+						min = Math.min(min, profile.size());
+						max = Math.max(max, profile.size());
+						if (profile.size() == 0) {
+							System.out.println(line);
+						}
+						userId = newUserId;
+						profile = new HashSet<Long>();
+					}
+					Long itemId = Long.valueOf(split[1]);
+					Double rating = Double.valueOf(split[2]);
+					/*if (rating <= 3.0) {
+						line = reader.readLine();
+						continue;
+					}*/
+					if (!dissimilarity.getItemContentMap().containsKey(itemId)) {
+						line = reader.readLine();
+						continue;
+					}
+					SparseVector vector = dissimilarity.getItemContentMap().get(itemId);
+					for (Long genre : vector.keySet()) {
+						profile.add(genre);
+					}
+					line = reader.readLine();
+				}
+				count++;
+				sum += profile.size();
+				System.out.println("Num " + count);
+				System.out.println("Genres " + sum);
+				System.out.println("Avg " + ((double) sum / count));
+				System.out.println("Min " + min);
+				System.out.println("Max " + max);
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void ratingsToGenres(String ratingPath, String contentPath) {
+		ContentAverageDissimilarity.create(contentPath);
+		ContentAverageDissimilarity dissimilarity = ContentAverageDissimilarity.getInstance();
+		MutableSparseVector emptyVector = dissimilarity.getEmptyVector();
+		Map<String, MutableSparseVector> userMap = new HashMap<String, MutableSparseVector>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			PrintWriter datasetWriter = new PrintWriter(new File("genreRatings.dat"));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] split = line.split("\t");
+					String userId = split[0];
+					Long itemId = Long.valueOf(split[1]);
+					MutableSparseVector userVector = emptyVector.mutableCopy();
+					if (userMap.containsKey(userId)) {
+						userVector = userMap.get(userId);
+					}
+					SparseVector itemVector = dissimilarity.getItemContentMap().get(itemId);
+					userVector.add(itemVector);
+					userMap.put(userId, userVector);
+					line = reader.readLine();
+				}
+				for (Map.Entry<String, MutableSparseVector> entry : userMap.entrySet()) {
+					for (Long key : emptyVector.keySet()) {
+						double val = 0;
+						if (entry.getValue().containsKey(key)) {
+							val = entry.getValue().get(key);
+						}
+						datasetWriter.println(entry.getKey() + "\t" + key + "\t" + (int) val);
+					}
+				}
+			} finally {
+				datasetWriter.close();
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void ratingNumber(String ratingPath) {
+		Map<String, Integer> userMap = new HashMap<String, Integer>();
+		try {
+			BufferedReader reader = new BufferedReader(new java.io.FileReader(ratingPath));
+			try {
+				String line = reader.readLine();
+				while (line != null) {
+					String[] split = line.split("\t");
+					String userId = split[0];
+					Integer count = 0;
+					if (userMap.containsKey(userId)) {
+						count = userMap.get(userId);
+					}
+					count++;
+					userMap.put(userId, count);
+					line = reader.readLine();
+				}
+				for (Map.Entry<String, Integer> user : userMap.entrySet()) {
+					if (user.getValue() == 25) {
+						System.out.println(user.getKey() + " " + user.getValue());
+					}
+				}
+			} finally {
+				reader.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

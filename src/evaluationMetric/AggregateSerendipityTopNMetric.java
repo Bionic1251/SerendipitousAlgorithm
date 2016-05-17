@@ -74,7 +74,7 @@ public class AggregateSerendipityTopNMetric extends AggregatePopSerendipityTopNM
 		for (Long itemId : items) {
 			double avgSim = 0.0;
 			for (Long ratedItemId : ratedItems) {
-				avgSim += ContentUtil.getSim(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
+				avgSim += ContentUtil.getJaccard(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
 			}
 			containerList.add(new evaluationMetric.Container<Double>(itemId, avgSim / ratedItems.size()));
 		}
@@ -90,7 +90,7 @@ public class AggregateSerendipityTopNMetric extends AggregatePopSerendipityTopNM
 	private List<Long> getClosestItems(SparseVector userVec, Set<Long> items, int itemNumber) {
 		List<evaluationMetric.Container<Double>> containerList = new ArrayList<evaluationMetric.Container<Double>>();
 		for (Long itemId : items) {
-			double sim = ContentUtil.getSim(userVec, itemContentMap.get(itemId));
+			double sim = ContentUtil.getJaccard(userVec, itemContentMap.get(itemId));
 			containerList.add(new evaluationMetric.Container<Double>(itemId, sim));
 		}
 		Collections.sort(containerList);

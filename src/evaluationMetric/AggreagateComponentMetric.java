@@ -129,7 +129,7 @@ public class AggreagateComponentMetric extends AbstractMetric<MeanAccumulator, A
 		SparseVector item = dMap.get(itemId);
 		for (Long ratedItemId : ratedIds) {
 			SparseVector ratedItem = dMap.get(ratedItemId);
-			dissim += 1.0 - ContentUtil.getSim(item, ratedItem);
+			dissim += 1.0 - ContentUtil.getJaccard(item, ratedItem);
 		}
 		dissim = dissim / ratedIds.size();
 		return dissim;

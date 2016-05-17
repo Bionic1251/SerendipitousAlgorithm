@@ -128,6 +128,13 @@ public class AggregateNDCGTopNMetric extends AbstractMetric<MeanAccumulator, Agg
 	public AggregateResult doMeasureUser(TestUser user, MeanAccumulator context) {
 		List<ScoredId> recommendations = user.getRecommendations(30, candidates, exclude);
 		if (recommendations == null || recommendations.isEmpty()) {
+			context1.add(0.0);
+			context5.add(0.0);
+			context10.add(0.0);
+			context15.add(0.0);
+			context20.add(0.0);
+			context25.add(0.0);
+			context30.add(0.0);
 			return null;
 		}
 		double ndcg1 = measureUser(user, context1, recommendations, 1);

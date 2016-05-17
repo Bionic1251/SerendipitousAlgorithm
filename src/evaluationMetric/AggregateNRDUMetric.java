@@ -388,7 +388,7 @@ public class AggregateNRDUMetric extends AbstractMetric<MeanAccumulator, Aggrega
 	private double getAverageDissimilarity(Collection<Long> ratedItems, Long itemId) {
 		double avgSim = 0.0;
 		for (Long ratedItemId : ratedItems) {
-			avgSim += 1 - ContentUtil.getSim(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
+			avgSim += 1 - ContentUtil.getJaccard(itemContentMap.get(ratedItemId), itemContentMap.get(itemId));
 		}
 		return avgSim / ratedItems.size();
 	}
